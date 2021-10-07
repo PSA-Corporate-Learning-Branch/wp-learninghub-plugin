@@ -20,7 +20,7 @@ while ( have_posts() ) :
 	?>
 
 
-<div class="dark-wrap">
+<div class="white-wrap">
 <div class="alignwide" id="coursetop">
 <div class="entry-content">
 	<div class="allcourseslink"><a href="/portal/course/">All Courses</a></div>
@@ -31,16 +31,18 @@ while ( have_posts() ) :
 </div>
 
 <div class="entry-content">
+<div class="course">
+<div style="background: #28537d; height: 6px; width: 100%;"></div> 
 
-	<div><?php the_terms( $post->ID, 'learning_partner', 'Learning Partner: ', ', ', ' ' ); ?></div>
-	<div><?php the_terms( $post->ID, 'course_category', 'Categories: ', ', ', ' ' ); ?></div>
-	<div><?php the_terms( $post->ID, 'delivery_method', 'Delivery Methods: ', ', ', ' ' ); ?></div>
-	<div><?php the_terms( $post->ID, 'role', 'Roles: ', ', ', ' ' ); ?></div>
-	<div style="display:none"><?php the_terms( $post->ID, 'keywords', 'Keywords: ', ', ', ' ' ); ?></div>
 
+<div class="learningpartner my-1">
+	<?php the_terms( $post->ID, 'learning_partner', 'Learning Partner: ', ', ', ' ' ); ?>
+</div>
+
+<div class="coursedesc p-1 bg-white">
 	<?php the_content() ?>
-
-	<div>
+</div>
+<div class="mt-1">
 	<a style="background: #3a9bd9; color: #F2F2F2; display: block; font-size: 2rem; padding: .25em .5em; text-align: center" 
 		href="<?= $post->course_link ?>" 
 		target="_blank" 
@@ -49,7 +51,16 @@ while ( have_posts() ) :
 	</a>
 	</div>
 
+	<div class="bg-white my-1 p-1">
+	<div class="coursecats"><?php the_terms( $post->ID, 'course_category', 'Categories: ', ', ', ' ' ); ?></div>
+	<div class="delivery-method"><?php the_terms( $post->ID, 'delivery_method', 'Delivery Methods: ', ', ', ' ' ); ?></div>
+	<div><?php the_terms( $post->ID, 'role', 'Roles: ', ', ', ' ' ); ?></div>
+	<div style="display:none"><?php the_terms( $post->ID, 'keywords', 'Keywords: ', ', ', ' ' ); ?></div>
+	</div>
 
+
+
+</div><!-- .course -->
 </div><!-- .entry-content -->
 
 <?php endwhile; // End of the loop.

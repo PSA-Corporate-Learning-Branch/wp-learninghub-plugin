@@ -41,18 +41,8 @@ $categories = get_terms(
 
 
 
-<style>
-    .alphabet a {
-        background: #F1F1F1;
-        border-radius: 3px;
-        display: inline-block;
-        font-size: .6em;
-        margin: 0 .15em;
-        padding: .25em .5em;
-        text-decoration: none;
-    }
-    </style>
-    <div class="alphabet text-center">
+
+    <div class="alphabet">
         <a href="#A">A</a>
         <a href="#B">B</a>
         <a href="#C">C</a>
@@ -81,13 +71,21 @@ $categories = get_terms(
         <a href="#Z">Z</a>
     </div> <!-- /.alphabet -->
 
-<div class="entry-content" id="courselist" style="margin-top: 1em;">
+
+
+
+<div class="entry-content" id="courselist">
 <div class="searchbox">
-<input class="search form-control mb-3" placeholder="Filter">
-<div>
-    <span id="coursecount"><?php echo $post_my_query->post_count; ?></span>
-    courses
+
+<div style="text-align: center; margin-bottom: 1em;">
+    <a href="https://lc.virtuallearn.ca/portal/foundational-courses/">Foundational Courses</a> | 
+    <a href="https://lc.virtuallearn.ca/portal/supervisors-and-managers/">Supervisors and Managers</a> | 
+    <a href="https://lc.virtuallearn.ca/portal/leadership/">Leadership</a>
 </div>
+
+<input class="search form-control mb-3" placeholder="Type to filter courses below">
+
+
 </div>
 <?php if( $post_my_query->have_posts() ) : ?>
 
@@ -104,7 +102,9 @@ $secondletter = substr($title, 0, 2);
 if($firstletter != '{' && $firstletter != '(') {            
     if($firstletter != $lastletter) {
         // not sure what to do here as list.js is counting these headers as courses :(
-        //echo '<h2 id="' . $firstletter . '">' . $firstletter . '</h2>';
+            // As it turns out, this is more important than a counter update, so we're
+            // implementing it and removing the live count update onfilter
+        echo '<h2 id="' . $firstletter . '">' . $firstletter . '</h2>';
     }
 }
 
@@ -124,9 +124,8 @@ endif;
 wp_reset_query($post_my_query);
 
 ?>
-</div>
-</div>
-</div>
+
+
 
 <script src="//cdnjs.cloudflare.com/ajax/libs/list.js/2.3.1/list.min.js"></script>
 <script>
@@ -135,12 +134,12 @@ var courseoptions = {
     valueNames: [ 'coursename', 'coursedesc', 'coursecats', 'coursekeys' ]
 };
 var courses = new List('courselist', courseoptions);
-document.getElementById('coursecount').innerHTML = courses.update().matchingItems.length;
-courses.on('searchComplete', function(){
-    //console.log(upcomingClasses.update().matchingItems.length);
-    //console.log(courses.update().matchingItems.length);
-    document.getElementById('coursecount').innerHTML = courses.update().matchingItems.length;
-});
+// document.getElementById('coursecount').innerHTML = courses.update().matchingItems.length;
+// courses.on('searchComplete', function(){
+//     //console.log(upcomingClasses.update().matchingItems.length);
+//     //console.log(courses.update().matchingItems.length);
+//     document.getElementById('coursecount').innerHTML = courses.update().matchingItems.length;
+// });
 
 </script>
 <?php get_footer(); ?>
