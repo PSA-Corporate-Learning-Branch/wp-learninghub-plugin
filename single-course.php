@@ -23,7 +23,9 @@ while ( have_posts() ) :
 <div class="white-wrap">
 <div class="alignwide" id="coursetop">
 <div class="entry-content">
-	<div class="allcourseslink"><a href="/portal/course/">All Courses</a></div>
+	<div class="allcourseslink">
+        <span class="delivery-method"><?php the_terms( $post->ID, 'delivery_method', '', ', ', ' ' ); ?></span>
+    </div>
 	<?php the_title( '<h1 class="coursehead">', '</h1>' ); ?>
 
 </div>
@@ -54,9 +56,7 @@ while ( have_posts() ) :
         <div class="coursecats mt-1">
             <?php the_terms( $post->ID, 'course_category', 'Categories: ', ', ', ' ' ); ?>
         </div>
-        <div class="delivery-method">
-            <?php the_terms( $post->ID, 'delivery_method', 'Delivery Method: ', ', ', ' ' ); ?>
-        </div>
+
 
     </div>
     </div>

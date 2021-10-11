@@ -443,7 +443,6 @@ function course_elm_sync() {
                         wp_set_object_terms( $post_id, $catesc, 'course_category', true);
                     }
                 }
-
                 array_push($newcourses,$post_id);
             }
         }
@@ -456,6 +455,7 @@ function course_elm_sync() {
     }
 
 }
+
 
 /* Fire our meta box setup function on the post editor screen. */
 add_action( 'load-post.php', 'courses_meta_boxes_setup' );
