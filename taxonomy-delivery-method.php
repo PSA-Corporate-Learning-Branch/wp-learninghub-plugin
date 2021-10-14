@@ -14,9 +14,36 @@ get_header();
 $description = get_the_archive_description();
 $term = get_term_by( 'slug', get_query_var( 'term' ), get_query_var( 'taxonomy' ) );
 $parent = get_term($term->parent, get_query_var('taxonomy') ); // get parent term
+
+$paged = (get_query_var('paged')) ? get_query_var('paged') : 1;
+$post_args = array(
+    'post_type'                => 'course',
+    'post_status'              => 'publish',
+    'posts_per_page'           => 500,
+    'paged'                    => $paged, 
+    'ignore_sticky_posts'      => 0,
+    'tax_query' => array(
+        array (
+            'taxonomy' => 'delivery_method',
+            'field' => 'slug',
+            'terms' => $term,
+        )
+    ),
+    'orderby'                  => 'name', 
+    'order'                    => 'ASC',
+    'hide_empty'               => 0,
+    'hierarchical'             => 1,
+    'exclude'                  => '',
+    'include'                  => '',
+    'number'                   => '',
+    'pad_counts'               => true, 
+);
+$post_my_query = null;
+$post_my_query = new WP_Query($post_args);
+
 ?>
 
-<?php if ( have_posts() ) : ?>
+<?php if( $post_my_query->have_posts() ) : ?>
 
 	<header class="entry-header alignfull" style="background: #FFF; padding: 2em 2em 3em 2em;">
 		<div class="alignwide">
@@ -69,8 +96,8 @@ foreach($methodlist as $method) {
     <input class="search form-control mb-3" placeholder="Type to filter courses">
 	</div>
 	<div class="list">
-	<?php while ( have_posts() ) : ?>
-		<?php the_post(); ?>
+	<?php while ($post_my_query->have_posts()) : $post_my_query->the_post();  ?>
+		
 		<?php get_template_part( 'template-parts/course/single-course' ) ?>
 	<?php endwhile; ?>
 </div> <!-- /.list -->
