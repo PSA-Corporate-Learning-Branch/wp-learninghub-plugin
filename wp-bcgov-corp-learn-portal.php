@@ -304,7 +304,7 @@ add_action( 'admin_menu', 'course_menu' );
  */
 function course_elm_sync() {
 
-	if ( !current_user_can( 'manage_options' ) )  {
+	if ( !current_user_can( 'edit_posts' ) )  {
 		wp_die( __( 'You do not have sufficient permissions to access this page.' ) );
 	}
     echo '<h1>PSA Learning System - Synchronize</h1>';
