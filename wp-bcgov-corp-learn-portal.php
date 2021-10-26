@@ -309,7 +309,7 @@ function course_elm_sync() {
 	}
     echo '<h1>PSA Learning System - Synchronize</h1>';
     echo '<p>Here we make all courses from <a href="';
-    echo 'edit-tags.php?taxonomy=source_system&post_type=course';
+    echo 'edit-tags.php?taxonomy=external_system&post_type=course';
     echo '">this Learning Partner</a> private so that we can selectively reenable them ';
     echo 'whem we read the PSA Learning System public feed of courses and compare it ';
     echo 'to what we already have. If the course exists, we check for updates and make ';
@@ -325,7 +325,8 @@ function course_elm_sync() {
      * the future, depending on feedback.
      * 
      * The term_id for the "PSA Learning System" category in the "Learning Partner" taxonomy
-     * is 14; you may need to change this value if it changes as we move betwixt platforms.
+     * could vary as you move sites around; you may need to change this value if it changes 
+     * as we move betwixt platforms.
      * #TODO perhaps make this a slug-based query?
      */
     $all_posts = get_posts(array(
@@ -333,14 +334,22 @@ function course_elm_sync() {
         'numberposts' => -1,
         'tax_query' => array(
             array(
-            'taxonomy' => 'external_systems',
+            'taxonomy' => 'external_system',
             'field' => 'term_id',
             'terms' => 415)
         ))
     );
     foreach ($all_posts as $single_post){
+
         $single_post->post_status = 'private';
+
+        wp_delete_object_term_relationships( $single_post->ID, 'course_category' );
+        wp_delete_object_term_relationships( $single_post->ID, 'learning_partner' );
+        wp_delete_object_term_relationships( $single_post->ID, 'keywords' );
+        wp_delete_object_term_relationships( $single_post->ID, 'delivery_method' );
+
         wp_update_post( $single_post );
+
     }
     /**
      * Now that all those courses are private, let's grab the public listing of courses from 
