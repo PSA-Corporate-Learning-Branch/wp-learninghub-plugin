@@ -49,12 +49,12 @@ $post_my_query = new WP_Query($post_args);
 		<div class="alignwide">
 	
 	<div>
-		<a href="/portal/course/">
+		<a href="/learninghub/course/">
 			All Courses
 		</a> 
 		<?php if(!empty($parent->slug)): ?>
 		/ 
-		<a href="/portal/course_category/<?php echo $parent->slug ?>">
+		<a href="/learninghub/course_category/<?php echo $parent->slug ?>">
 			<?php echo $parent->name ?>
 		</a>
 		<?php endif ?>
@@ -80,7 +80,7 @@ $methodlist = get_categories(
 foreach($methodlist as $method) {
 	$active = '';
 	if($method->name == $term->name) $active = 'active';
-	echo '<a class="'.$active.'" href="/portal/delivery_method/'. $method->slug . '">' . $method->name . '</a> | ';
+	echo '<a class="'.$active.'" href="/learninghub/delivery_method/'. $method->slug . '">' . $method->name . '</a> | ';
 }
 
 //print_r($catlist);

@@ -48,12 +48,12 @@ $post_my_query = new WP_Query($post_args);
 		<div class="alignwide">
 	
 	<div>
-		<a href="/portal/course/">
+		<a href="/learninghub/course/">
 			All Courses
 		</a> 
 		<?php if(!empty($parent->slug)): ?>
 		/ 
-		<a href="/portal/course_category/<?php echo $parent->slug ?>">
+		<a href="/learninghub/course_category/<?php echo $parent->slug ?>">
 			<?php echo $parent->name ?>
 		</a>
 		<?php endif ?>
@@ -77,7 +77,7 @@ $catlist = get_categories(
 						));
 
 foreach($catlist as $childcat) {
-	echo '<a href="/portal/course_category/'. $childcat->slug . '">' . $childcat->name . '</a> | ';
+	echo '<a href="/learninghub/course_category/'. $childcat->slug . '">' . $childcat->name . '</a> | ';
 }
 
 //print_r($catlist);
