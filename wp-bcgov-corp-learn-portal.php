@@ -353,9 +353,9 @@ function course_elm_sync() {
 
     }
     /**
-     * Now that all those courses are private, let's grab the public listing of courses from 
-     * the PSA Learning System and loop through those, updating existing ones as required 
-     * and publishing new ones.
+     * Now that all those courses are private and have had their taxonomy terms stripped, 
+     * let's grab the public listing of courses from the PSA Learning System and loop 
+     * through those, updating existing ones as required and publishing new ones.
      * Old feed:
      * https://learn.bcpublicservice.gov.bc.ca/learningcentre/courses/feed.json
      */
@@ -448,10 +448,6 @@ function course_elm_sync() {
     }
     
     echo '<h1>' . count($newcourses) . ' new courses created.</h1>';
-    echo '<h1>Updated Courses</h1>';
-    foreach($existingcourses as $ex) {
-        echo $ex->post_title . ' updated<br>';
-    }
 
 }
 
