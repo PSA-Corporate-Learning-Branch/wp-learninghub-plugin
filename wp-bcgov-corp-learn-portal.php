@@ -291,7 +291,7 @@ function course_menu() {
 		'edit.php?post_type=course',
 		__( 'ELM Sync', 'elm-sync' ),
 		__( 'ELM Sync', 'elm-sync' ),
-		'elm-sync',
+		'edit_posts',
 		'elm-sync',
 		'course_elm_sync'
 	);
@@ -332,11 +332,12 @@ function course_elm_sync() {
     $all_posts = get_posts(array(
         'post_type' => 'course',
         'numberposts' => -1,
+        'post_status'    => 'any',
         'tax_query' => array(
             array(
             'taxonomy' => 'external_system',
             'field' => 'term_id',
-            'terms' => 415)
+            'terms' => 282)
         ))
     );
     foreach ($all_posts as $single_post){
@@ -381,29 +382,18 @@ function course_elm_sync() {
                     // the updated courses list that we will show in the UI
                     $updated = 1;
                 }
-                // #TODO #FIXME check all the fields for changes here
-                // ...
-                // ...
-                // #FIXME this is purely additive and not *remove* any 
-                // categories; find a way to strip all cats first
-                // perhaps at the top when we set everything to private
                 $cats = explode(',', $course->tags);
                 foreach($cats as $cat) {
                     $catesc = sanitize_text_field($cat);
                     wp_set_object_terms( $existingcourse->ID, $catesc, 'course_category', true);
                 }
-                // For the keywords, we're just going to run through and
-                // add them all in whether they exist already or not; if
-                // this becomes problematic, add in the necessary processing
-                // so that we only add new tags. 
-                // #FIXME this is purely additive and not *remove* any keywords
-                // find a way to strip all keywords first
-                // perhaps at the top when we set everything to private
                 $keywords = explode(',', $course->_keywords);
                 foreach($keywords as $key) {
                     $keyesc = sanitize_text_field($key);
                     wp_set_object_terms( $existingcourse->ID, $key, 'keywords', true);
                 }
+                wp_set_object_terms( $existingcourse->ID, sanitize_text_field($course->delivery_method), 'delivery_method', false);
+                wp_set_object_terms( $existingcourse->ID, sanitize_text_field($course->_learning_partner), 'learning_partner', false);
 
                 // Even if there aren't any changes, if the course exists in
                 // the feed then we need to set this back to publish. In this
