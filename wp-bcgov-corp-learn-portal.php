@@ -291,7 +291,7 @@ function course_menu() {
 		'edit.php?post_type=course',
 		__( 'ELM Sync', 'elm-sync' ),
 		__( 'ELM Sync', 'elm-sync' ),
-		'elm-sync',
+		'edit_posts',
 		'elm-sync',
 		'course_elm_sync'
 	);
@@ -304,12 +304,12 @@ add_action( 'admin_menu', 'course_menu' );
  */
 function course_elm_sync() {
 
-	if ( !current_user_can( 'manage_options' ) )  {
+	if ( !current_user_can( 'edit_posts' ) )  {
 		wp_die( __( 'You do not have sufficient permissions to access this page.' ) );
 	}
     echo '<h1>PSA Learning System - Synchronize</h1>';
     echo '<p>Here we make all courses from <a href="';
-    echo 'edit-tags.php?taxonomy=source_system&post_type=course';
+    echo 'edit-tags.php?taxonomy=external_system&post_type=course';
     echo '">this Learning Partner</a> private so that we can selectively reenable them ';
     echo 'whem we read the PSA Learning System public feed of courses and compare it ';
     echo 'to what we already have. If the course exists, we check for updates and make ';
@@ -325,27 +325,37 @@ function course_elm_sync() {
      * the future, depending on feedback.
      * 
      * The term_id for the "PSA Learning System" category in the "Learning Partner" taxonomy
-     * is 14; you may need to change this value if it changes as we move betwixt platforms.
+     * could vary as you move sites around; you may need to change this value if it changes 
+     * as we move betwixt platforms.
      * #TODO perhaps make this a slug-based query?
      */
     $all_posts = get_posts(array(
         'post_type' => 'course',
         'numberposts' => -1,
+        'post_status'    => 'any',
         'tax_query' => array(
             array(
-            'taxonomy' => 'external_systems',
+            'taxonomy' => 'external_system',
             'field' => 'term_id',
-            'terms' => 415)
+            'terms' => 282)
         ))
     );
     foreach ($all_posts as $single_post){
+
         $single_post->post_status = 'private';
+
+        wp_delete_object_term_relationships( $single_post->ID, 'course_category' );
+        wp_delete_object_term_relationships( $single_post->ID, 'learning_partner' );
+        wp_delete_object_term_relationships( $single_post->ID, 'keywords' );
+        wp_delete_object_term_relationships( $single_post->ID, 'delivery_method' );
+
         wp_update_post( $single_post );
+
     }
     /**
-     * Now that all those courses are private, let's grab the public listing of courses from 
-     * the PSA Learning System and loop through those, updating existing ones as required 
-     * and publishing new ones.
+     * Now that all those courses are private and have had their taxonomy terms stripped, 
+     * let's grab the public listing of courses from the PSA Learning System and loop 
+     * through those, updating existing ones as required and publishing new ones.
      * Old feed:
      * https://learn.bcpublicservice.gov.bc.ca/learningcentre/courses/feed.json
      */
@@ -372,29 +382,18 @@ function course_elm_sync() {
                     // the updated courses list that we will show in the UI
                     $updated = 1;
                 }
-                // #TODO #FIXME check all the fields for changes here
-                // ...
-                // ...
-                // #FIXME this is purely additive and not *remove* any 
-                // categories; find a way to strip all cats first
-                // perhaps at the top when we set everything to private
                 $cats = explode(',', $course->tags);
                 foreach($cats as $cat) {
                     $catesc = sanitize_text_field($cat);
                     wp_set_object_terms( $existingcourse->ID, $catesc, 'course_category', true);
                 }
-                // For the keywords, we're just going to run through and
-                // add them all in whether they exist already or not; if
-                // this becomes problematic, add in the necessary processing
-                // so that we only add new tags. 
-                // #FIXME this is purely additive and not *remove* any keywords
-                // find a way to strip all keywords first
-                // perhaps at the top when we set everything to private
                 $keywords = explode(',', $course->_keywords);
                 foreach($keywords as $key) {
                     $keyesc = sanitize_text_field($key);
                     wp_set_object_terms( $existingcourse->ID, $key, 'keywords', true);
                 }
+                wp_set_object_terms( $existingcourse->ID, sanitize_text_field($course->delivery_method), 'delivery_method', false);
+                wp_set_object_terms( $existingcourse->ID, sanitize_text_field($course->_learning_partner), 'learning_partner', false);
 
                 // Even if there aren't any changes, if the course exists in
                 // the feed then we need to set this back to publish. In this
@@ -449,10 +448,6 @@ function course_elm_sync() {
     }
     
     echo '<h1>' . count($newcourses) . ' new courses created.</h1>';
-    echo '<h1>Updated Courses</h1>';
-    foreach($existingcourses as $ex) {
-        echo $ex->post_title . ' updated<br>';
-    }
 
 }
 

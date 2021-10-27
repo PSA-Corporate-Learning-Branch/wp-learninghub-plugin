@@ -74,7 +74,7 @@ foreach($term_vals as $key=>$val){
     <?php endif; ?>
 </div>
 <div class="wp-block-column">
-	<div><a class="allpartnerslink" href="/portal/corporate-learning-partners/">All Partners</a></div>
+	<div><a class="allpartnerslink" href="/learninghub/corporate-learning-partners/">All Partners</a></div>
 	<h1><?php echo $term->name ?></h1>
 		<?php //the_archive_title( '<h1 class="page-title">', '</h1>' ); ?>
 		<?php if ( $description ) : ?>
@@ -108,7 +108,7 @@ $catlist = get_categories(
 						));
 
 foreach($catlist as $childcat) {
-	echo '<a href="/portal/course_category/'. $childcat->slug . '">' . $childcat->name . '</a> | ';
+	echo '<a href="/learninghub/course_category/'. $childcat->slug . '">' . $childcat->name . '</a> | ';
 }
 
 //print_r($catlist);
