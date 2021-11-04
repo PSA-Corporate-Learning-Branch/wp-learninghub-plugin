@@ -137,16 +137,11 @@ foreach($catlist as $childcat) {
 <script src="//cdnjs.cloudflare.com/ajax/libs/list.js/2.3.1/list.min.js"></script>
 <script>
 
-var courseoptions =  ?>
+var courseoptions = {
     valueNames: [ 'coursename', 'coursedesc', 'coursecats', 'coursekeys' ]
 };
 var courses = new List('courselist', courseoptions);
-document.getElementById('coursecount').innerHTML = courses.update().matchingItems.length;
-courses.on('searchComplete', function(){
-    //console.log(upcomingClasses.update().matchingItems.length);
-    //console.log(courses.update().matchingItems.length);
-    document.getElementById('coursecount').innerHTML = courses.update().matchingItems.length;
-});
+
 
 </script>
 <?php get_footer(); ?>
