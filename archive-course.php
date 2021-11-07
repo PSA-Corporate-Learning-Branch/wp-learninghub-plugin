@@ -39,7 +39,11 @@ $categories = get_terms(
 );
 ?>
 
-
+<p class="has-background" style="background-color:#c3d4e4;text-align: center;">
+    <a href="https://learningcentre.gww.gov.bc.ca/learninghub/foundational-courses/">Foundational Courses</a> | 
+    <a href="https://learningcentre.gww.gov.bc.ca/learninghub/supervisors-and-managers/">Supervisors and Managers</a> | 
+    <a href="https://learningcentre.gww.gov.bc.ca/learninghub/leadership/">Leadership</a>
+</p>
 
 
     <div class="alphabet">
@@ -75,13 +79,8 @@ $categories = get_terms(
 
 
 <div class="entry-content" id="courselist">
-<div class="searchbox">
 
-<div style="text-align: center; margin-bottom: 1em;">
-    <a href="https://learningcentre.gww.gov.bc.ca/learninghub/foundational-courses/">Foundational Courses</a> | 
-    <a href="https://learningcentre.gww.gov.bc.ca/learninghub/supervisors-and-managers/">Supervisors and Managers</a> | 
-    <a href="https://learningcentre.gww.gov.bc.ca/learninghub/leadership/">Leadership</a>
-</div>
+<div class="searchbox">
 
 <input class="search form-control mb-3" placeholder="Type to filter courses below">
 
