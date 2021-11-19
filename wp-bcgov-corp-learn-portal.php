@@ -324,10 +324,6 @@ function course_elm_sync() {
      * published again and move on. We could just delete them, and may change to that in 
      * the future, depending on feedback.
      * 
-     * The term_id for the "PSA Learning System" category in the "Learning Partner" taxonomy
-     * could vary as you move sites around; you may need to change this value if it changes 
-     * as we move betwixt platforms.
-     * #TODO perhaps make this a slug-based query?
      */
     $all_posts = get_posts(array(
         'post_type' => 'course',
@@ -336,8 +332,8 @@ function course_elm_sync() {
         'tax_query' => array(
             array(
             'taxonomy' => 'external_system',
-            'field' => 'term_id',
-            'terms' => 282)
+            'field' => 'slug',
+            'terms' => 'psa-learning-system')
         ))
     );
     foreach ($all_posts as $single_post){
