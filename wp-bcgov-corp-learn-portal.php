@@ -289,10 +289,26 @@ add_filter( 'taxonomy_template', 'course_tax_template');
 function course_menu() {
 	add_submenu_page(
 		'edit.php?post_type=course',
-		__( 'ELM Sync', 'elm-sync' ),
-		__( 'ELM Sync', 'elm-sync' ),
+		__( 'External Systems Sync', 'ext-sys-sync' ),
+		__( 'Systems Sync', 'systems-sync' ),
 		'edit_posts',
-		'elm-sync',
+		'systems-sync',
+		'systems_sync'
+	);
+	add_submenu_page(
+		null,
+		null,
+		null,
+		'edit_posts',
+		'course_mark_all_private',
+		'course_mark_all_private'
+	);
+	add_submenu_page(
+		null,
+		null,
+		null,
+		'edit_posts',
+		'course_elm_sync',
 		'course_elm_sync'
 	);
 
@@ -302,20 +318,34 @@ add_action( 'admin_menu', 'course_menu' );
 /**
  * Synchronize with the public feed for the PSA Learning System (ELM)
  */
-function course_elm_sync() {
+function systems_sync() {
 
 	if ( !current_user_can( 'edit_posts' ) )  {
 		wp_die( __( 'You do not have sufficient permissions to access this page.' ) );
 	}
-    echo '<h1>PSA Learning System - Synchronize</h1>';
-    echo '<p>Here we make all courses from <a href="';
-    echo 'edit-tags.php?taxonomy=external_system&post_type=course';
-    echo '">this Learning Partner</a> private so that we can selectively reenable them ';
-    echo 'whem we read the PSA Learning System public feed of courses and compare it ';
+    echo '<h1>External Systems Synchronize</h1>';
+    echo '<p>Here we make all courses from the chosen external system ';
+    echo 'private so that we can selectively reenable them ';
+    echo 'when we read the associated feed of courses and compare it ';
     echo 'to what we already have. If the course exists, we check for updates and make ';
     echo 'those accordingly. If the course does not exist, we create it.</p>';
     echo '<p><strong>*NOTE</strong> that if the course existed previously, but is now no ';
     echo 'longer in the feed, it will remain set to "private" and not published on the site.</p>';
+    echo '<div>';
+    $go = admin_url('edit.php?noheader=true&post_type=course&page=course_mark_all_private');
+    echo '<a href="'.$go.'" ';
+    echo 'style="background-color: #222; color: #FFF; display: inline-block; padding: .75em 2em;">';
+    echo 'Synchronize PSA Learning System';
+    echo '</a>';
+    echo '</div>';
+
+}
+
+function course_mark_all_private () {
+    
+    if ( !current_user_can( 'edit_posts' ) )  {
+      wp_die( __( 'You do not have sufficient permissions to access this page.' ) );
+    }
     /**
      * First let's make every page private so that if the course is no longer in the catalog, 
      * that it gets removed from the listing here. Note that we're just making these courses
@@ -326,127 +356,135 @@ function course_elm_sync() {
      * 
      */
     $all_posts = get_posts(array(
-        'post_type' => 'course',
-        'numberposts' => -1,
-        'post_status'    => 'any',
-        'tax_query' => array(
-            array(
-            'taxonomy' => 'external_system',
-            'field' => 'slug',
-            'terms' => 'psa-learning-system')
-        ))
-    );
-    foreach ($all_posts as $single_post){
+      'post_type' => 'course',
+      'numberposts' => -1,
+      'post_status'    => 'any',
+      'tax_query' => array(
+          array(
+          'taxonomy' => 'external_system',
+          'field' => 'slug',
+          'terms' => 'psa-learning-system')
+      ))
+  );
+  foreach ($all_posts as $single_post){
 
-        $single_post->post_status = 'private';
+      $single_post->post_status = 'private';
 
-        wp_delete_object_term_relationships( $single_post->ID, 'course_category' );
-        wp_delete_object_term_relationships( $single_post->ID, 'learning_partner' );
-        wp_delete_object_term_relationships( $single_post->ID, 'keywords' );
-        wp_delete_object_term_relationships( $single_post->ID, 'delivery_method' );
+      wp_delete_object_term_relationships( $single_post->ID, 'course_category' );
+      wp_delete_object_term_relationships( $single_post->ID, 'learning_partner' );
+      wp_delete_object_term_relationships( $single_post->ID, 'keywords' );
+      wp_delete_object_term_relationships( $single_post->ID, 'delivery_method' );
 
-        wp_update_post( $single_post );
+      wp_update_post( $single_post );
 
-    }
-    /**
-     * Now that all those courses are private and have had their taxonomy terms stripped, 
-     * let's grab the public listing of courses from the PSA Learning System and loop 
-     * through those, updating existing ones as required and publishing new ones.
-     * Old feed:
-     * https://learn.bcpublicservice.gov.bc.ca/learningcentre/courses/feed.json
-     */
-    $feed = file_get_contents('https://learn.bcpublicservice.gov.bc.ca/learning-hub/learning-partner-courses.json');
-    $courses = json_decode($feed);
-    echo '<h3>' . count($courses->items) . ' Courses.</h3>';
-
-    $existingcourses = [];
-    $newcourses = [];
-    foreach($courses->items as $course) {
-
-        if(!empty($course->title)) {
-            $existing = post_exists($course->title);
-            if($existing) {
-                // Get existing course details
-                $existingcourse = get_post($existing);
-                // Check the basics to see if details match; if they don't
-                // then update them wile incrementing the $updated variable
-                // so that we can show which courses have been updated
-                // in the UI
-                if($existingcourse->description != $course->summary) {
-                    $existingcourse->description = $course->summary;
-                    // set updated to 1 so that we know to add this course to 
-                    // the updated courses list that we will show in the UI
-                    $updated = 1;
-                }
-                $cats = explode(',', $course->tags);
-                foreach($cats as $cat) {
-                    $catesc = sanitize_text_field($cat);
-                    wp_set_object_terms( $existingcourse->ID, $catesc, 'course_category', true);
-                }
-                $keywords = explode(',', $course->_keywords);
-                foreach($keywords as $key) {
-                    $keyesc = sanitize_text_field($key);
-                    wp_set_object_terms( $existingcourse->ID, $key, 'keywords', true);
-                }
-                wp_set_object_terms( $existingcourse->ID, sanitize_text_field($course->delivery_method), 'delivery_method', false);
-                wp_set_object_terms( $existingcourse->ID, sanitize_text_field($course->_learning_partner), 'learning_partner', false);
-
-                // Even if there aren't any changes, if the course exists in
-                // the feed then we need to set this back to publish. In this
-                // way, if the course no longer exists in the feed, it won't
-                // get changed back and will remain private
-                $existingcourse->post_status = 'publish';
-                wp_update_post( $existingcourse );
-                // We loop through $existingcourses below
-                if($updated > 0) {
-                    array_push($existingcourses,$existingcourse);
-                }
-                // set back to 0 so it doesn't trigger on the next loop
-                $updated = 0;
-            } else {
-                // set up the new course with basic settings in place
-                $new_course = array(
-                    'post_title' => sanitize_text_field($course->title),
-                    'post_type' => 'course',
-                    'post_status' => 'publish', 
-                    'post_content' => sanitize_text_field($course->summary),
-                    'post_excerpt' => substr(sanitize_text_field($course->summary), 0, 100),
-                    'meta_input'   => array(
-                        'course_link' => esc_url_raw($course->url),
-                        'elm_course_code' => (int) $course->id
-                    )
-                );
-                // Actually create the new post so that we can move on 
-                // to updating it with taxonomy etc
-                $post_id = wp_insert_post( $new_course );
-
-                wp_set_object_terms( $post_id, sanitize_text_field($course->delivery_method), 'delivery_method', false);
-                wp_set_object_terms( $post_id, sanitize_text_field($course->_learning_partner), 'learning_partner', false);
-                wp_set_object_terms( $post_id, 'PSA Learning System', 'external_system', false);
-
-                if(!empty($course->_keywords)) {
-                    $keywords = explode(',', $course->_keywords);
-                    foreach($keywords as $key) {
-                        $keyesc = sanitize_text_field($key);
-                        wp_set_object_terms( $post_id, $keyesc, 'keywords', true);
-                    }
-                }
-                if(!empty($course->tags)) {
-                    $cats = explode(',', $course->tags);
-                    foreach($cats as $cat) {
-                      $catesc = sanitize_text_field($cat);
-                        wp_set_object_terms( $post_id, $catesc, 'course_category', true);
-                    }
-                }
-                array_push($newcourses,$post_id);
-            }
-        }
-    }
-    
-    echo '<h1>' . count($newcourses) . ' new courses created.</h1>';
+  }
+  $go = 'Location: ' . admin_url('edit.php?post_type=course&page=course_elm_sync');
+  header($go);
 
 }
 
+function course_elm_sync () {
+  if ( !current_user_can( 'edit_posts' ) )  {
+    wp_die( __( 'You do not have sufficient permissions to access this page.' ) );
+  }
+  /**
+   * Now that all those courses are private and have had their taxonomy terms stripped, 
+   * let's grab the public listing of courses from the PSA Learning System and loop 
+   * through those, updating existing ones as required and publishing new ones.
+   * Old feed:
+   * https://learn.bcpublicservice.gov.bc.ca/learningcentre/courses/feed.json
+   */
+  $feed = file_get_contents('https://learn.bcpublicservice.gov.bc.ca/learning-hub/learning-partner-courses.json');
+  $courses = json_decode($feed);
+  echo '<h3>' . count($courses->items) . ' Courses.</h3>';
+
+  $existingcourses = [];
+  $newcourses = [];
+  foreach($courses->items as $course) {
+
+      if(!empty($course->title)) {
+          $existing = post_exists($course->title);
+          if($existing) {
+              // Get existing course details
+              $existingcourse = get_post($existing);
+              // Check the basics to see if details match; if they don't
+              // then update them wile incrementing the $updated variable
+              // so that we can show which courses have been updated
+              // in the UI
+              if($existingcourse->description != $course->summary) {
+                  $existingcourse->description = $course->summary;
+                  // set updated to 1 so that we know to add this course to 
+                  // the updated courses list that we will show in the UI
+                  $updated = 1;
+              }
+              $cats = explode(',', $course->tags);
+              foreach($cats as $cat) {
+                  $catesc = sanitize_text_field($cat);
+                  wp_set_object_terms( $existingcourse->ID, $catesc, 'course_category', true);
+              }
+              $keywords = explode(',', $course->_keywords);
+              foreach($keywords as $key) {
+                  $keyesc = sanitize_text_field($key);
+                  wp_set_object_terms( $existingcourse->ID, $key, 'keywords', true);
+              }
+              wp_set_object_terms( $existingcourse->ID, sanitize_text_field($course->delivery_method), 'delivery_method', false);
+              wp_set_object_terms( $existingcourse->ID, sanitize_text_field($course->_learning_partner), 'learning_partner', false);
+
+              // Even if there aren't any changes, if the course exists in
+              // the feed then we need to set this back to publish. In this
+              // way, if the course no longer exists in the feed, it won't
+              // get changed back and will remain private
+              $existingcourse->post_status = 'publish';
+              wp_update_post( $existingcourse );
+              // We loop through $existingcourses below
+              if($updated > 0) {
+                  array_push($existingcourses,$existingcourse);
+              }
+              // set back to 0 so it doesn't trigger on the next loop
+              $updated = 0;
+          } else {
+              // set up the new course with basic settings in place
+              $new_course = array(
+                  'post_title' => sanitize_text_field($course->title),
+                  'post_type' => 'course',
+                  'post_status' => 'publish', 
+                  'post_content' => sanitize_text_field($course->summary),
+                  'post_excerpt' => substr(sanitize_text_field($course->summary), 0, 100),
+                  'meta_input'   => array(
+                      'course_link' => esc_url_raw($course->url),
+                      'elm_course_code' => (int) $course->id
+                  )
+              );
+              // Actually create the new post so that we can move on 
+              // to updating it with taxonomy etc
+              $post_id = wp_insert_post( $new_course );
+
+              wp_set_object_terms( $post_id, sanitize_text_field($course->delivery_method), 'delivery_method', false);
+              wp_set_object_terms( $post_id, sanitize_text_field($course->_learning_partner), 'learning_partner', false);
+              wp_set_object_terms( $post_id, 'PSA Learning System', 'external_system', false);
+
+              if(!empty($course->_keywords)) {
+                  $keywords = explode(',', $course->_keywords);
+                  foreach($keywords as $key) {
+                      $keyesc = sanitize_text_field($key);
+                      wp_set_object_terms( $post_id, $keyesc, 'keywords', true);
+                  }
+              }
+              if(!empty($course->tags)) {
+                  $cats = explode(',', $course->tags);
+                  foreach($cats as $cat) {
+                    $catesc = sanitize_text_field($cat);
+                      wp_set_object_terms( $post_id, $catesc, 'course_category', true);
+                  }
+              }
+              array_push($newcourses,$post_id);
+          }
+      }
+  }
+  
+  echo '<h1>' . count($newcourses) . ' new courses created.</h1>';
+
+}
 
 /* Fire our meta box setup function on the post editor screen. */
 add_action( 'load-post.php', 'courses_meta_boxes_setup' );
