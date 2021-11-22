@@ -365,22 +365,17 @@ function course_mark_all_private () {
           'field' => 'slug',
           'terms' => 'psa-learning-system')
       ))
-  );
-  foreach ($all_posts as $single_post){
-
-      $single_post->post_status = 'private';
-
-      wp_delete_object_term_relationships( $single_post->ID, 'course_category' );
-      wp_delete_object_term_relationships( $single_post->ID, 'learning_partner' );
-      wp_delete_object_term_relationships( $single_post->ID, 'keywords' );
-      wp_delete_object_term_relationships( $single_post->ID, 'delivery_method' );
-
-      wp_update_post( $single_post );
-
-  }
-  $go = 'Location: ' . admin_url('edit.php?post_type=course&page=course_elm_sync');
-  header($go);
-
+    );
+    foreach ($all_posts as $single_post){
+        $single_post->post_status = 'private';
+        wp_delete_object_term_relationships( $single_post->ID, 'course_category' );
+        wp_delete_object_term_relationships( $single_post->ID, 'learning_partner' );
+        wp_delete_object_term_relationships( $single_post->ID, 'keywords' );
+        wp_delete_object_term_relationships( $single_post->ID, 'delivery_method' );
+        wp_update_post( $single_post );
+    }
+    $go = 'Location: ' . admin_url('edit.php?post_type=course&page=course_elm_sync');
+    header($go);
 }
 
 function course_elm_sync () {
@@ -417,6 +412,7 @@ function course_elm_sync () {
                   // the updated courses list that we will show in the UI
                   $updated = 1;
               }
+
               $cats = explode(',', $course->tags);
               foreach($cats as $cat) {
                   $catesc = sanitize_text_field($cat);
@@ -430,11 +426,15 @@ function course_elm_sync () {
               wp_set_object_terms( $existingcourse->ID, sanitize_text_field($course->delivery_method), 'delivery_method', false);
               wp_set_object_terms( $existingcourse->ID, sanitize_text_field($course->_learning_partner), 'learning_partner', false);
 
+              $existingcourse->elm_course_code = esc_url_raw($course->url);
+              $existingcourse->course_link = (int) $course->id;
+
               // Even if there aren't any changes, if the course exists in
               // the feed then we need to set this back to publish. In this
               // way, if the course no longer exists in the feed, it won't
               // get changed back and will remain private
               $existingcourse->post_status = 'publish';
+
               wp_update_post( $existingcourse );
               // We loop through $existingcourses below
               if($updated > 0) {
