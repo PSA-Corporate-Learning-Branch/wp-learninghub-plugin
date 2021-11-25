@@ -38,6 +38,24 @@ $categories = get_terms(
     array('parent' => 0)
 );
 ?>
+<div class="wp-block-cover alignfull has-background-dim-80 has-background-dim hero" 
+	style="padding-top:0px;padding-right:0px;padding-bottom:0px;padding-left:0px;background-color:#28537d;min-height:180px">
+		
+			<img loading="lazy" 
+					class="wp-block-cover__image-background wp-image-4447" 
+					alt="" 
+					src="https://learningcentre.gww.gov.bc.ca/learninghub/wp-content/uploads/sites/6/2021/11/Courses1.jpg" 
+					style="object-position:100% 50%" 
+					data-object-fit="cover" 
+					data-object-position="100% 50%" 
+					sizes="(max-width: 1352px) 100vw, 1352px" 
+					width="1352" 
+					height="888">
+
+	<div class="wp-block-cover__inner-container">
+		<h1>All Courses</h1>
+	</div>
+</div>
 
 <p class="has-background" style="background-color:#c3d4e4;text-align: center;">
     <a href="https://learningcentre.gww.gov.bc.ca/learninghub/foundational-courses/">Foundational Courses</a> | 
