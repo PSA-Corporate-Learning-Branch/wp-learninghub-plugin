@@ -435,8 +435,11 @@ function course_elm_sync () {
               wp_set_object_terms( $existingcourse->ID, sanitize_text_field($course->delivery_method), 'delivery_method', false);
               wp_set_object_terms( $existingcourse->ID, sanitize_text_field($course->_learning_partner), 'learning_partner', false);
 
-              $existingcourse->elm_course_code = esc_url_raw($course->url);
-              $existingcourse->course_link = (int) $course->id;
+              
+              if($existingcourse->elm_course_code != $course->id) {
+                $existingcourse->course_link = esc_url_raw($course->url);
+                $existingcourse->elm_course_code = $course->id;
+              }
 
               // Even if there aren't any changes, if the course exists in
               // the feed then we need to set this back to publish. In this
