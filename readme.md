@@ -2,7 +2,7 @@
 # BC Gov Corporate Learning Hub
 Description: A gateway to everything that BC Gov has to offer for learning opportunities.
 
-## [Check out the Learning Hub](https://learningcentre.gww.gov.bc.ca/hub) (**BC Gov ID required**)
+## [Check out the Learning Hub](https://learningcentre.gww.gov.bc.ca/learninghub) (**BC Gov ID required**)
 
 This plugin enables a custom content type, and several custom taxonomies to go along 
 with it. We'll create a "course" type and associate taxonomies such as Categories,
