@@ -366,6 +366,18 @@ function course_mark_all_private () {
           'terms' => 'psa-learning-system')
       ))
     );
+    /**
+     * In order to actually synchronize and not just add new terms, we go through each taxonomy
+     * and delete all of its terms. If we don't do this, then we go through our feed and update
+     * we will _only add_ new terms to whatever course we're looking at, instead of removing them
+     * For example, if we change the learning partner of a course, without this we'd have courses 
+     * that belong to many partners (its history, if you will). This is expensive but necessary
+     * unless we take another look at straight-up deleting the courses and re-creating them
+     * wholesale upon each sync (daily). This might work, but the internal wordpress IDs would
+     * start to inflate somewhat dramatically... imagine after a year or daily syncs where a couple
+     * hundred courses are created 260x200=52000 posts per year???
+     */
+  
     foreach ($all_posts as $single_post){
         $single_post->post_status = 'private';
         wp_delete_object_term_relationships( $single_post->ID, 'course_category' );
@@ -439,6 +451,9 @@ function course_elm_sync () {
               if($existingcourse->elm_course_code != $course->id) {
                 $existingcourse->course_link = esc_url_raw($course->url);
                 $existingcourse->elm_course_code = $course->id;
+                  // set updated to 1 so that we know to add this course to 
+                  // the updated courses list that we will show in the UI
+                  $updated = 1;
               }
 
               // Even if there aren't any changes, if the course exists in
@@ -454,8 +469,10 @@ function course_elm_sync () {
               }
               // set back to 0 so it doesn't trigger on the next loop
               $updated = 0;
-          } else {
-              // set up the new course with basic settings in place
+              
+          } else { // This course does NOT already exist, so we create it
+
+              // Set up the new course with basic settings in place
               $new_course = array(
                   'post_title' => sanitize_text_field($course->title),
                   'post_type' => 'course',
@@ -464,7 +481,7 @@ function course_elm_sync () {
                   'post_excerpt' => substr(sanitize_text_field($course->summary), 0, 100),
                   'meta_input'   => array(
                       'course_link' => esc_url_raw($course->url),
-                      'elm_course_code' => (int) $course->id
+                      'elm_course_code' => $course->id
                   )
               );
               // Actually create the new post so that we can move on 
@@ -494,6 +511,7 @@ function course_elm_sync () {
       }
   }
   
+  echo '<h1>' . count($existingcourses) . ' courses Updated.</h1>';
   echo '<h1>' . count($newcourses) . ' new courses created.</h1>';
 
 }
