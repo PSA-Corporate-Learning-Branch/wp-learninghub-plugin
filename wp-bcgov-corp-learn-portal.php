@@ -389,6 +389,15 @@ function course_elm_sync () {
    * Old feed:
    * https://learn.bcpublicservice.gov.bc.ca/learningcentre/courses/feed.json
    */
+  
+  /**
+   * This process generally takes longer that 30 seconds, at least on the OpenShift platform,
+   * so we need to set the timeout to longer than that. We're going to double that here to 
+   * 60 seconds, because if it takes longer than that, I should think that we might reconsider
+   * the approach here and maybe do this in batches?
+   */
+  set_time_limit(60);
+
   $feed = file_get_contents('https://learn.bcpublicservice.gov.bc.ca/learning-hub/learning-partner-courses.json');
   $courses = json_decode($feed);
   echo '<h3>' . count($courses->items) . ' Courses.</h3>';
