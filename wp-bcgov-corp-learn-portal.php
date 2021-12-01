@@ -641,6 +641,10 @@ if ( ! class_exists( 'CT_TAX_META' ) ) {
           <label for="partner-url">Partner URL</label>
            <input type="text" id="partner-url" name="partner-url" class="" value="">
         </div>
+        <div class="form-field term-group">
+          <label for="partner-contact">Partner Contact</label>
+           <input type="text" id="partner-contact" name="partner-contact" class="" value="">
+        </div>
      <?php
      }
     
@@ -656,6 +660,10 @@ if ( ! class_exists( 'CT_TAX_META' ) ) {
        if( isset( $_POST['partner-url'] ) && '' !== $_POST['partner-url'] ){
         $url = $_POST['partner-url'];
         add_term_meta( $term_id, 'partner-url', $url, true );
+      }
+       if( isset( $_POST['partner-contact'] ) && '' !== $_POST['partner-contact'] ){
+        $url = $_POST['partner-contact'];
+        add_term_meta( $term_id, 'partner-contact', $url, true );
       }
      }
     
@@ -694,6 +702,17 @@ if ( ! class_exists( 'CT_TAX_META' ) ) {
             </div>
         </td>
         </tr>
+       <tr class="form-field term-group-wrap">
+         <th scope="row">
+           <label for=""><?php _e('Partner Contact', 'twentytwentyone-learning-hub-theme'); ?></label>
+         </th>
+         <td>
+         <div class="form-field term-group">
+              <?php $pcontactinfo = get_term_meta ( $term -> term_id, 'partner-contact', true ); ?>
+              <input type="text" id="partner-contact" name="partner-contact" class="" value="<?= $pcontactinfo ?>">
+            </div>
+        </td>
+        </tr>
      <?php
      }
     
@@ -713,6 +732,12 @@ if ( ! class_exists( 'CT_TAX_META' ) ) {
         update_term_meta ( $term_id, 'partner-url', $url );
       } else {
         update_term_meta ( $term_id, 'partner-url', '' );
+      }
+       if( isset( $_POST['partner-contact'] ) && '' !== $_POST['partner-contact'] ){
+        $pcinfo = $_POST['partner-contact'];
+        update_term_meta ( $term_id, 'partner-contact', $pcinfo );
+      } else {
+        update_term_meta ( $term_id, 'partner-contact', '' );
       }
      }
     
