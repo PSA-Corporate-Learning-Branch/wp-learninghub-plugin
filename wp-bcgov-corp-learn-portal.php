@@ -347,6 +347,14 @@ function course_mark_all_private () {
       wp_die( __( 'You do not have sufficient permissions to access this page.' ) );
     }
     /**
+     * This process generally takes longer that 30 seconds, at least on the OpenShift platform,
+     * so we need to set the timeout to longer than that. We're going to double that here to 
+     * 60 seconds, because if it takes longer than that, I should think that we might reconsider
+     * the approach here and maybe do this in batches?
+     */
+    set_time_limit(60);
+    
+    /**
      * First let's make every page private so that if the course is no longer in the catalog, 
      * that it gets removed from the listing here. Note that we're just making these courses
      * private, and NOT deleting them. We're going to loop through the source catalog after 
