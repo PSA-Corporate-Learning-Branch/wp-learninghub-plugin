@@ -335,7 +335,7 @@ function systems_sync() {
     $go = admin_url('edit.php?noheader=true&post_type=course&page=course_mark_all_private');
     echo '<a href="'.$go.'" ';
     echo 'style="background-color: #222; color: #FFF; display: inline-block; padding: .75em 2em;">';
-    echo 'Synchronize PSA Learning System';
+    echo 'Start synchronization with PSA Learning System';
     echo '</a>';
     echo '</div>';
 
@@ -353,7 +353,7 @@ function course_mark_all_private () {
      * the approach here and maybe do this in batches?
      */
     set_time_limit(60);
-    
+
     /**
      * First let's make every page private so that if the course is no longer in the catalog, 
      * that it gets removed from the listing here. Note that we're just making these courses
@@ -394,8 +394,11 @@ function course_mark_all_private () {
         wp_delete_object_term_relationships( $single_post->ID, 'delivery_method' );
         wp_update_post( $single_post );
     }
-    $go = 'Location: ' . admin_url('edit.php?post_type=course&page=course_elm_sync');
-    header($go);
+    echo '<div><a href="' . admin_url('edit.php?post_type=course&page=course_elm_sync'). '" ';
+    echo 'style="background-color: #222; color: #FFF; display: inline-block; padding: .75em 2em;">';
+    echo 'Run Sync</a></div>';
+    // $go = 'Location: ' . admin_url('edit.php?post_type=course&page=course_elm_sync');
+    // header($go);
 }
 
 function course_elm_sync () {
