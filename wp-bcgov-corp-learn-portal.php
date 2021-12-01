@@ -366,6 +366,18 @@ function course_mark_all_private () {
           'terms' => 'psa-learning-system')
       ))
     );
+    /**
+     * In order to actually synchronize and not just add new terms, we go through each taxonomy
+     * and delete all of its terms. If we don't do this, then we go through our feed and update
+     * we will _only add_ new terms to whatever course we're looking at, instead of removing them
+     * For example, if we change the learning partner of a course, without this we'd have courses 
+     * that belong to many partners (its history, if you will). This is expensive but necessary
+     * unless we take another look at straight-up deleting the courses and re-creating them
+     * wholesale upon each sync (daily). This might work, but the internal wordpress IDs would
+     * start to inflate somewhat dramatically... imagine after a year or daily syncs where a couple
+     * hundred courses are created 260x200=52000 posts per year???
+     */
+  
     foreach ($all_posts as $single_post){
         $single_post->post_status = 'private';
         wp_delete_object_term_relationships( $single_post->ID, 'course_category' );
@@ -435,8 +447,14 @@ function course_elm_sync () {
               wp_set_object_terms( $existingcourse->ID, sanitize_text_field($course->delivery_method), 'delivery_method', false);
               wp_set_object_terms( $existingcourse->ID, sanitize_text_field($course->_learning_partner), 'learning_partner', false);
 
-              $existingcourse->elm_course_code = esc_url_raw($course->url);
-              $existingcourse->course_link = (int) $course->id;
+              
+              if($existingcourse->elm_course_code != $course->id) {
+                $existingcourse->course_link = esc_url_raw($course->url);
+                $existingcourse->elm_course_code = $course->id;
+                  // set updated to 1 so that we know to add this course to 
+                  // the updated courses list that we will show in the UI
+                  $updated = 1;
+              }
 
               // Even if there aren't any changes, if the course exists in
               // the feed then we need to set this back to publish. In this
@@ -451,8 +469,10 @@ function course_elm_sync () {
               }
               // set back to 0 so it doesn't trigger on the next loop
               $updated = 0;
-          } else {
-              // set up the new course with basic settings in place
+              
+          } else { // This course does NOT already exist, so we create it
+
+              // Set up the new course with basic settings in place
               $new_course = array(
                   'post_title' => sanitize_text_field($course->title),
                   'post_type' => 'course',
@@ -461,7 +481,7 @@ function course_elm_sync () {
                   'post_excerpt' => substr(sanitize_text_field($course->summary), 0, 100),
                   'meta_input'   => array(
                       'course_link' => esc_url_raw($course->url),
-                      'elm_course_code' => (int) $course->id
+                      'elm_course_code' => $course->id
                   )
               );
               // Actually create the new post so that we can move on 
@@ -491,6 +511,7 @@ function course_elm_sync () {
       }
   }
   
+  echo '<h1>' . count($existingcourses) . ' courses Updated.</h1>';
   echo '<h1>' . count($newcourses) . ' new courses created.</h1>';
 
 }
@@ -620,6 +641,10 @@ if ( ! class_exists( 'CT_TAX_META' ) ) {
           <label for="partner-url">Partner URL</label>
            <input type="text" id="partner-url" name="partner-url" class="" value="">
         </div>
+        <div class="form-field term-group">
+          <label for="partner-contact">Partner Contact</label>
+           <input type="text" id="partner-contact" name="partner-contact" class="" value="">
+        </div>
      <?php
      }
     
@@ -635,6 +660,10 @@ if ( ! class_exists( 'CT_TAX_META' ) ) {
        if( isset( $_POST['partner-url'] ) && '' !== $_POST['partner-url'] ){
         $url = $_POST['partner-url'];
         add_term_meta( $term_id, 'partner-url', $url, true );
+      }
+       if( isset( $_POST['partner-contact'] ) && '' !== $_POST['partner-contact'] ){
+        $url = $_POST['partner-contact'];
+        add_term_meta( $term_id, 'partner-contact', $url, true );
       }
      }
     
@@ -673,6 +702,17 @@ if ( ! class_exists( 'CT_TAX_META' ) ) {
             </div>
         </td>
         </tr>
+       <tr class="form-field term-group-wrap">
+         <th scope="row">
+           <label for=""><?php _e('Partner Contact', 'twentytwentyone-learning-hub-theme'); ?></label>
+         </th>
+         <td>
+         <div class="form-field term-group">
+              <?php $pcontactinfo = get_term_meta ( $term -> term_id, 'partner-contact', true ); ?>
+              <input type="text" id="partner-contact" name="partner-contact" class="" value="<?= $pcontactinfo ?>">
+            </div>
+        </td>
+        </tr>
      <?php
      }
     
@@ -692,6 +732,12 @@ if ( ! class_exists( 'CT_TAX_META' ) ) {
         update_term_meta ( $term_id, 'partner-url', $url );
       } else {
         update_term_meta ( $term_id, 'partner-url', '' );
+      }
+       if( isset( $_POST['partner-contact'] ) && '' !== $_POST['partner-contact'] ){
+        $pcinfo = $_POST['partner-contact'];
+        update_term_meta ( $term_id, 'partner-contact', $pcinfo );
+      } else {
+        update_term_meta ( $term_id, 'partner-contact', '' );
       }
      }
     
