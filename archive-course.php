@@ -39,7 +39,7 @@ $categories = get_terms(
 );
 ?>
 <div class="wp-block-cover alignfull has-background-dim-80 has-background-dim hero" 
-	style="padding-top:0px;padding-right:0px;padding-bottom:0px;padding-left:0px;background-color:#28537d;min-height:180px">
+	style="padding-top:0px;padding-right:0px;padding-bottom:0px;padding-left:0px;background-color:#28537d;min-height:220px">
 		
 			<img loading="lazy" 
 					class="wp-block-cover__image-background wp-image-4447" 
@@ -52,16 +52,17 @@ $categories = get_terms(
 					width="1352" 
 					height="888">
 
-	<div class="wp-block-cover__inner-container">
+	<div class="wp-block-cover__inner-container has-text-align-center">
 		<h1>All Courses</h1>
 	</div>
 </div>
 
-<p class="has-text-align-center has-black-color has-text-color has-small-font-size">
+<p class="has-background has-text-align-center has-black-color has-text-color has-small-font-size" style="background-color:#c3d4e4;text-align: center;">
     <a href="https://learningcentre.gww.gov.bc.ca/learninghub/foundational-courses/">Foundational Courses</a> | 
     <a href="https://learningcentre.gww.gov.bc.ca/learninghub/supervisors-and-managers/">Supervisors &amp; Managers</a> | 
     <a href="https://learningcentre.gww.gov.bc.ca/learninghub/leadership/">Leadership in the BCPS</a>
 </p>
+
 
 <div class="alphabet">
     <a href="#A">A</a>
