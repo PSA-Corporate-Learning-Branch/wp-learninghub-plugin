@@ -50,7 +50,11 @@ while ( have_posts() ) :
             href="<?= $post->course_link ?>" 
             target="_blank" 
             rel="noopener">
+            <?php if(!empty($exsys[0]->name)): ?>
                 Register on <?= $exsys[0]->name ?>
+                <?php else: ?>
+                Get More Information
+                <?php endif ?>
         </a>
         </div>
         <div class="coursecats mt-1">
