@@ -438,8 +438,9 @@ function course_elm_sync () {
               // then update them wile incrementing the $updated variable
               // so that we can show which courses have been updated
               // in the UI
-              if($existingcourse->description != $course->summary) {
-                  $existingcourse->description = $course->summary;
+              if($existingcourse->post_content != $course->summary) {
+
+                  $existingcourse->post_content = $course->summary;
                   // set updated to 1 so that we know to add this course to 
                   // the updated courses list that we will show in the UI
                   $updated = 1;
