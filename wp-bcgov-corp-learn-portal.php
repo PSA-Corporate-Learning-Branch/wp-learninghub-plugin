@@ -394,11 +394,11 @@ function course_mark_all_private () {
         wp_delete_object_term_relationships( $single_post->ID, 'delivery_method' );
         wp_update_post( $single_post );
     }
-    echo '<div><a href="' . admin_url('edit.php?post_type=course&page=course_elm_sync'). '" ';
-    echo 'style="background-color: #222; color: #FFF; display: inline-block; padding: .75em 2em;">';
-    echo 'Run Sync</a></div>';
-    // $go = 'Location: ' . admin_url('edit.php?post_type=course&page=course_elm_sync');
-    // header($go);
+    //echo '<div><a href="' . admin_url('edit.php?post_type=course&page=course_elm_sync'). '" ';
+    //echo 'style="background-color: #222; color: #FFF; display: inline-block; padding: .75em 2em;">';
+    //echo 'Run Sync</a></div>';
+    $go = 'Location: ' . admin_url('edit.php?post_type=course&page=course_elm_sync');
+    header($go);
 }
 
 function course_elm_sync () {
@@ -419,7 +419,7 @@ function course_elm_sync () {
    * 60 seconds, because if it takes longer than that, I should think that we might reconsider
    * the approach here and maybe do this in batches?
    */
-  set_time_limit(60);
+  //set_time_limit(60);
 
   $feed = file_get_contents('https://learn.bcpublicservice.gov.bc.ca/learning-hub/learning-partner-courses.json');
   $courses = json_decode($feed);
