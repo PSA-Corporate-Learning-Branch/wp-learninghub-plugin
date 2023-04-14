@@ -45,7 +45,12 @@ function my_custom_post_course() {
         'show_in_menu'        => true,
         'menu_position'       => 5,
         'menu_icon'          => 'dashicons-book',
-        'supports'            => array( 'title', 'editor', 'thumbnail' ),
+        'supports'            => array( 'title', 
+                                        'editor', 
+                                        'thumbnail',
+                                        'author',
+                                        'page-attributes',
+                                        'custom-fields')
         // , 'custom-fields'        
     );
     register_post_type( 'course', $args ); 

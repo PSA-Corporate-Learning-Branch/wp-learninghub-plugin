@@ -34,8 +34,7 @@ while ( have_posts() ) :
 
 <div class="entry-content my-1">
 <div class="course bg-white">
-<div style="background: #28537d; height: 6px; width: 100%;"></div> 
-<div class="p-1">
+
     <div class="details" id="course-<?= $post->ID ?>">
 
         <div class="coursedesc bg-white mt-wee">
@@ -61,9 +60,6 @@ while ( have_posts() ) :
             <?php the_terms( $post->ID, 'course_category', 'Categories: ', ', ', ' ' ); ?>
         </div>
 
-
-    </div>
-    </div>
 </div> <!-- /.course -->
 </div><!-- .entry-content -->
 

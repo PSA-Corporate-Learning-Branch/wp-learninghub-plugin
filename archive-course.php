@@ -38,6 +38,7 @@ $categories = get_terms(
     array('parent' => 0)
 );
 ?>
+
 <div class="wp-block-cover alignfull has-background-dim-80 has-background-dim hero" 
 	style="padding-top:0px;padding-right:0px;padding-bottom:0px;padding-left:0px;background-color:#28537d;min-height:220px">
 		
@@ -57,43 +58,6 @@ $categories = get_terms(
 	</div>
 </div>
 
-<p class="has-background has-text-align-center has-black-color has-text-color has-small-font-size" style="background-color:#c3d4e4;text-align: center;">
-    <a href="https://learningcentre.gww.gov.bc.ca/learninghub/foundational-courses/">Foundational Courses</a> | 
-    <a href="https://learningcentre.gww.gov.bc.ca/learninghub/supervisors-and-managers/">Supervisors &amp; Managers</a> | 
-    <a href="https://learningcentre.gww.gov.bc.ca/learninghub/leadership/">Leadership in the BCPS</a>
-</p>
-
-
-<div class="alphabet">
-    <a href="#A">A</a>
-    <a href="#B">B</a>
-    <a href="#C">C</a>
-    <a href="#D">D</a>
-    <a href="#E">E</a>
-    <a href="#F">F</a>
-    <a href="#G">G</a>
-    <a href="#H">H</a>
-    <a href="#I">I</a>
-    <a href="#J">J</a>
-    <a href="#K">K</a>
-    <a href="#L">L</a>
-    <a href="#M">M</a>
-    <a href="#N">N</a>
-    <a href="#O">O</a>
-    <a href="#P">P</a>
-    <a href="#Q">Q</a>
-    <a href="#R">R</a>
-    <a href="#S">S</a>
-    <a href="#T">T</a>
-    <a href="#U">U</a>
-    <a href="#V">V</a>
-    <a href="#W">W</a>
-    <a href="#X">X</a>
-    <a href="#Y">Y</a>
-    <a href="#Z">Z</a>
-</div> <!-- /.alphabet -->
-
-
 
 
 <div class="entry-content" id="courselist">
@@ -112,18 +76,7 @@ $categories = get_terms(
 $lastletter = '';
 while ($post_my_query->have_posts()) : $post_my_query->the_post(); 
 
-$title = get_the_title();
-$firstletter = substr($title, 0, 1);
-$secondletter = substr($title, 0, 2);
 
-if($firstletter != '{' && $firstletter != '(') {            
-    if($firstletter != $lastletter) {
-        // not sure what to do here as list.js is counting these headers as courses :(
-            // As it turns out, this is more important than a counter update, so we're
-            // implementing it and removing the live count update onfilter
-        echo '<h2 id="' . $firstletter . '">' . $firstletter . '</h2>';
-    }
-}
 
 get_template_part( 'template-parts/course/single-course' );
 
