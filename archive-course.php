@@ -70,7 +70,7 @@ $categories = get_terms(
 </div>
 <?php if( $post_my_query->have_posts() ) : ?>
 
-<div class="entry-content">
+    <div class="alignwide">
 <div class="list">
 <?php
 $lastletter = '';
