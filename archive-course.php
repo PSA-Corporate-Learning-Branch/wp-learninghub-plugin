@@ -17,13 +17,12 @@ $paged = (get_query_var('paged')) ? get_query_var('paged') : 1;
 $post_args=array(
     'post_type'                => 'course',
     'post_status'              => 'publish',
-    'posts_per_page'           => 300,
+    'posts_per_page'           => 500,
     'paged'                    => $paged, 
     'ignore_sticky_posts'      => 0,
     'child_of'                 => 0,
     'parent'                   => 0,
-    'orderby'                  => 'name', 
-    'order'                    => 'ASC',
+    'orderby'                  => array('post_date' =>'ASC'),
     'hide_empty'               => 0,
     'hierarchical'             => 1,
     'exclude'                  => '',
@@ -39,54 +38,39 @@ $categories = get_terms(
 );
 ?>
 
-<div class="wp-block-cover alignfull has-background-dim-80 has-background-dim hero" 
-	style="padding-top:0px;padding-right:0px;padding-bottom:0px;padding-left:0px;background-color:#28537d;min-height:220px">
-		
-			<img loading="lazy" 
-					class="wp-block-cover__image-background wp-image-4447" 
-					alt="" 
-					src="https://learningcentre.gww.gov.bc.ca/learninghub/wp-content/uploads/sites/6/2021/11/courses2.jpg" 
-					style="object-position:100% 50%" 
-					data-object-fit="cover" 
-					data-object-position="100% 50%" 
-					sizes="(max-width: 1352px) 100vw, 1352px" 
-					width="1352" 
-					height="888">
-
-	<div class="wp-block-cover__inner-container has-text-align-center">
-		<h1>All Courses</h1>
-	</div>
-</div>
+<header class="entry-header alignfull" style="background: #FFF; padding: 2em;">
+		<div class="alignwide">
+            <h1>All Courses</h1>
+	    </div>
+	</header><!-- .page-header -->
 
 
-
-<div class="entry-content" id="courselist">
-
-<div class="searchbox">
-
-<input class="search form-control mb-3" placeholder="Type to filter courses below">
+	<div class="alignwide">
 
 
-</div>
+<!-- wp:columns {"align":"full"} -->
+<div class="wp-block-columns alignfull"><!-- wp:column -->
+<div class="wp-block-column" style="flex: 66%;">
+<div class="">
+
+
 <?php if( $post_my_query->have_posts() ) : ?>
 
-    <div class="alignwide">
-<div class="list">
+    
+
 <?php
-$lastletter = '';
+
 while ($post_my_query->have_posts()) : $post_my_query->the_post(); 
 
 
 
 get_template_part( 'template-parts/course/single-course' );
 
-$lastletter = $firstletter;
 
 endwhile;
 ?>
-</div>
-</div>
-</div>
+
+
 <?php
 else :      
     echo '<p>No Courses Found!</p>';   
@@ -97,19 +81,44 @@ wp_reset_query($post_my_query);
 
 
 
-<script src="//cdnjs.cloudflare.com/ajax/libs/list.js/2.3.1/list.min.js"></script>
-<script>
+</div>
+</div>
+<!-- /wp:column -->
+<!-- wp:column -->
+<div class="wp-block-column" style="flex: 29%; padding: 0 2%;">
 
-var courseoptions = {
-    valueNames: [ 'coursename', 'coursedesc', 'coursecats', 'coursekeys' ]
-};
-var courses = new List('courselist', courseoptions);
-// document.getElementById('coursecount').innerHTML = courses.update().matchingItems.length;
-// courses.on('searchComplete', function(){
-//     //console.log(upcomingClasses.update().matchingItems.length);
-//     //console.log(courses.update().matchingItems.length);
-//     document.getElementById('coursecount').innerHTML = courses.update().matchingItems.length;
-// });
+<h4>Suggested Courses</h4>
+<div style="background-color: #FFF; border-radius: 5px; padding: .5em;">
+<div>
+    <a href="https://learningcentre.gww.gov.bc.ca/learninghub/foundational-courses/">Mandatory &amp; Foundational</a>
+</div>
+<div>
+    <a href="https://learningcentre.gww.gov.bc.ca/learninghub/supervisors-and-managers/">Supervisors &amp; Managers</a>
+</div>
+<div>
+    <a href="https://learningcentre.gww.gov.bc.ca/learninghub/leadership/">Leadership in the BCPS</a>
+</div>
+</div>
+<h4>Suggested Searches</h4>
+<div style="background-color: #FFF; border-radius: 5px; padding: .5em;">
+<div><a href="/learninghub/?s=flexiblebcps&post_type=courses">#flexibleBCPS</a></div>
+<p>Flexible workplaces? Managing remote teams? The courses and resources you need.</p>
+</div>
+<div style="background-color: #FFF; border-radius: 5px; margin-top: 1em; padding: .5em;">
+<div><a href="/learninghub/?s=flexiblebcps&post_type=courses">#BCPSBelonging</a></div>
+<p>Great courses that cover equity, diversity and inclusion.</p>
 
-</script>
+<!-- /wp:column -->
+</div>
+</div>
+</div>
+</div>
+
+
+
+
 <?php get_footer(); ?>
+
+
+	
+
