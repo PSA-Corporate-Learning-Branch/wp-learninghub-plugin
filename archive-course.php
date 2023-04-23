@@ -41,6 +41,7 @@ $categories = get_terms(
 <header class="entry-header alignfull" style="background: #FFF; padding: 2em;">
 		<div class="alignwide">
             <h1>All Courses</h1>
+            <div>Sorted alphabetically.</div>
 	    </div>
 	</header><!-- .page-header -->
 

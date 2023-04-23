@@ -465,8 +465,9 @@ function course_elm_sync () {
               wp_set_object_terms( $existingcourse->ID, sanitize_text_field($course->_learning_partner), 'learning_partner', false);
 
               
+              $existingcourse->course_link = esc_url_raw($course->url);
+              
               if($existingcourse->elm_course_code != $course->id) {
-                $existingcourse->course_link = esc_url_raw($course->url);
                 $existingcourse->elm_course_code = $course->id;
                   // set updated to 1 so that we know to add this course to 
                   // the updated courses list that we will show in the UI
