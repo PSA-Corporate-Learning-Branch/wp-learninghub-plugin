@@ -12,7 +12,9 @@
 get_header();
 
 $description = get_the_archive_description();
-
+$sort = esc_html($_GET['sort'] ?? 'post_name');
+$ob = 'ASC';
+if($sort == 'post_date') $ob = 'DESC';
 $paged = (get_query_var('paged')) ? get_query_var('paged') : 1;
 $post_args=array(
     'post_type'                => 'course',
@@ -22,7 +24,7 @@ $post_args=array(
     'ignore_sticky_posts'      => 0,
     'child_of'                 => 0,
     'parent'                   => 0,
-    'orderby'                  => array('post_date' =>'ASC'),
+    'orderby'                  => array($sort => $ob),
     'hide_empty'               => 0,
     'hierarchical'             => 1,
     'exclude'                  => '',
@@ -41,7 +43,11 @@ $categories = get_terms(
 <header class="entry-header alignfull" style="background: #FFF; padding: 2em;">
 		<div class="alignwide">
             <h1>All Courses</h1>
-            <div>Sorted alphabetically.</div>
+            <?php if($sort == 'post_date'): ?>
+            <div>Sorted by most recent. <a href="/learninghub/course/">Sort Alphabetically</a></div>
+            <?php else: ?>
+            <div>Sorted alphabetically. <a href="/learninghub/course/?sort=post_date">Sort by recently added</a></div>
+            <?php endif ?>
 	    </div>
 	</header><!-- .page-header -->
 
