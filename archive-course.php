@@ -41,15 +41,15 @@ $categories = get_terms(
 ?>
 
 <header class="entry-header alignfull" style="background: #FFF; padding: 2em;">
-		<div class="alignwide">
-            <h1>All Courses</h1>
-            <?php if($sort == 'post_date'): ?>
-            <div>Sorted by most recent. <a href="/learninghub/course/">Sort Alphabetically</a></div>
-            <?php else: ?>
-            <div>Sorted alphabetically. <a href="/learninghub/course/?sort=post_date">Sort by recently added</a></div>
-            <?php endif ?>
-	    </div>
-	</header><!-- .page-header -->
+    <div class="alignwide">
+        <h1>All Courses</h1>
+        <?php if($sort == 'post_date'): ?>
+        <div>Sorted by most recent. <a href="/learninghub/course/">Sort Alphabetically</a></div>
+        <?php else: ?>
+        <div>Sorted alphabetically. <a href="/learninghub/course/?sort=post_date">Sort by recently added</a></div>
+        <?php endif ?>
+    </div>
+</header><!-- .page-header -->
 
 
 	<div class="alignwide">
@@ -59,8 +59,10 @@ $categories = get_terms(
 <div class="wp-block-columns alignfull"><!-- wp:column -->
 <div class="wp-block-column" style="flex: 66%;">
 <div class="">
-
-
+<button style="background: #FFF; border:0; border-radius: 5px; color: #333; font-size: 14px; float: right; padding: 0 1em;" onclick="openAll()">
+    Expand/Collapse
+</button>
+<div style="clear: both"></div>
 <?php if( $post_my_query->have_posts() ) : ?>
 
     
@@ -86,7 +88,14 @@ wp_reset_query($post_my_query);
 
 ?>
 
-
+<script>
+function openAll() {
+    let foo = document.body.querySelectorAll('details').forEach((e) => {
+        (e.hasAttribute('open')) ? e.removeAttribute('open') : e.setAttribute('open',true);
+    });
+    return foo;
+}
+</script>
 
 </div>
 </div>
@@ -97,23 +106,59 @@ wp_reset_query($post_my_query);
 <h4>Suggested Courses</h4>
 <div style="background-color: #FFF; border-radius: 5px; padding: .5em;">
 <div>
-    <a href="https://learningcentre.gww.gov.bc.ca/learninghub/foundational-courses/">Mandatory &amp; Foundational</a>
+    <a href="/learninghub/foundational-courses/">Mandatory &amp; Foundational</a>
 </div>
 <div>
-    <a href="https://learningcentre.gww.gov.bc.ca/learninghub/supervisors-and-managers/">Supervisors &amp; Managers</a>
+    <a href="/learninghub/supervisors-and-managers/">Supervisors &amp; Managers</a>
 </div>
 <div>
-    <a href="https://learningcentre.gww.gov.bc.ca/learninghub/leadership/">Leadership in the BCPS</a>
+    <a href="/learninghub/leadership/">Leadership in the BCPS</a>
 </div>
 </div>
 <h4>Suggested Searches</h4>
 <div style="background-color: #FFF; border-radius: 5px; padding: .5em;">
-<div><a href="/learninghub/?s=flexiblebcps&post_type=courses">#flexibleBCPS</a></div>
+<div><a href="/learninghub/?s=flexibleBCPS">#flexibleBCPS</a></div>
 <p>Flexible workplaces? Managing remote teams? The courses and resources you need.</p>
 </div>
 <div style="background-color: #FFF; border-radius: 5px; margin-top: 1em; padding: .5em;">
-<div><a href="/learninghub/?s=flexiblebcps&post_type=courses">#BCPSBelonging</a></div>
+<div><a href="/learninghub/?s=BCPSBelonging">#BCPSBelonging</a></div>
 <p>Great courses that cover equity, diversity and inclusion.</p>
+</div>
+<?php 
+$news_args = array(
+    'post_type'                => 'post',
+    'post_status'              => 'publish',
+    'posts_per_page'           => 3,
+    'ignore_sticky_posts'      => 0,
+    'child_of'                 => 0,
+    'parent'                   => 0,
+    'orderby'                  => array('post_date' =>'ASC'),
+    'hide_empty'               => 0,
+    'hierarchical'             => 1,
+    'exclude'                  => '',
+    'include'                  => '',
+    'number'                   => '',
+    'pad_counts'               => true, 
+);
+$news = null;
+$news = new WP_Query($news_args);
+if( $news->have_posts() ) : ?>
+
+    <h4 class="alignwide">Recent News</h4>
+    <div style="background: #FFF; border-radius: 5px; padding: .5em;">
+    <?php while ($news->have_posts()) : $news->the_post(); ?>
+    <div>
+        <a href="<?= the_permalink() ?>">
+            <?= the_title() ?>
+        </a>
+    </div>
+    <?php endwhile ?>
+	</div>
+    
+<?php else: ?>
+    <p>No news is bad news?</p>
+<?php endif; ?>
+<?php wp_reset_query($news); ?>
 
 <!-- /wp:column -->
 </div>

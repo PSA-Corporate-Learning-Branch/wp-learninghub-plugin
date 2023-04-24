@@ -464,8 +464,10 @@ function course_elm_sync () {
               wp_set_object_terms( $existingcourse->ID, sanitize_text_field($course->delivery_method), 'delivery_method', false);
               wp_set_object_terms( $existingcourse->ID, sanitize_text_field($course->_learning_partner), 'learning_partner', false);
 
-              
-              $existingcourse->course_link = esc_url_raw($course->url);
+              if($course->url != $existingcourse->course_link) {
+                $existingcourse->course_link = esc_url_raw($course->url);
+                $updated = 1;
+              }
               
               if($existingcourse->elm_course_code != $course->id) {
                 $existingcourse->elm_course_code = $course->id;
