@@ -40,7 +40,7 @@ $categories = get_terms(
 );
 ?>
 
-<header class="entry-header alignfull" style="background: #FFF; padding: 2em;">
+<header class="alignfull" style="background: #FFF; padding: 2em;">
     <div class="alignwide">
         <h1>All Courses</h1>
         <?php if($sort == 'post_date'): ?>
@@ -59,8 +59,8 @@ $categories = get_terms(
 <div class="wp-block-columns alignfull"><!-- wp:column -->
 <div class="wp-block-column" style="flex: 66%;">
 <div class="">
-<button style="background: #FFF; border:0; border-radius: 5px; color: #333; font-size: 14px; float: right; padding: 0 1em;" onclick="openAll()">
-    Expand/Collapse
+<button id="expandcollapse" style="background: #FFF; border:0; border-radius: 5px; color: #333; font-size: 14px; float: right; padding: 0 1em;">
+    Expand All
 </button>
 <div style="clear: both"></div>
 <?php if( $post_my_query->have_posts() ) : ?>
@@ -89,7 +89,18 @@ wp_reset_query($post_my_query);
 ?>
 
 <script>
-function openAll() {
+
+let exco = document.getElementById('expandcollapse');
+exco.addEventListener('click', (e) => { 
+        e.preventDefault();
+		if(exco.innerHTML == 'Collapse All') {
+			exco.innerHTML = 'Expand All';
+		} else {
+			exco.innerHTML = 'Collapse All';
+		}
+		toggleAll();
+});
+function toggleAll() {
     let foo = document.body.querySelectorAll('details').forEach((e) => {
         (e.hasAttribute('open')) ? e.removeAttribute('open') : e.setAttribute('open',true);
     });
