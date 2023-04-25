@@ -92,13 +92,13 @@ wp_reset_query($post_my_query);
 
 let exco = document.getElementById('expandcollapse');
 exco.addEventListener('click', (e) => { 
-        e.preventDefault();
-		if(exco.innerHTML == 'Collapse All') {
-			exco.innerHTML = 'Expand All';
-		} else {
-			exco.innerHTML = 'Collapse All';
-		}
-		toggleAll();
+    e.preventDefault();
+    if(exco.innerHTML == 'Collapse All') {
+        exco.innerHTML = 'Expand All';
+    } else {
+        exco.innerHTML = 'Collapse All';
+    }
+    toggleAll();
 });
 function toggleAll() {
     let foo = document.body.querySelectorAll('details').forEach((e) => {

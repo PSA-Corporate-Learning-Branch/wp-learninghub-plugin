@@ -284,6 +284,9 @@ function course_tax_template( $tax_template ) {
   if ( is_tax ( 'delivery_method' ) ) {
     $tax_template = dirname( __FILE__ ) . '/taxonomy-delivery-method.php';
   }
+  if ( is_tax ( 'external_system' ) ) {
+    $tax_template = dirname( __FILE__ ) . '/taxonomy-external-system.php';
+  }
   return $tax_template;
 }
 

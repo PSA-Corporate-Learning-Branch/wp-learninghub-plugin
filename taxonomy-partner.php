@@ -59,9 +59,10 @@ foreach($term_vals as $key=>$val){
 
 <?php if( $post_my_query->have_posts() ) : ?>
 	
-<div class="white-wrap">
-<div class="wp-block-columns alignwide" id="partnertop">
+<div class="white-wrap" style="background-color: #FFF; margin-bottom: 2em; padding: 2em;">
+<div class="wp-block-columns alignwide">
 <div class="wp-block-column" style="flex-basis:33.33%">
+<div class="">
 	<?php if(!empty($partnerlogo)): ?>
     <?php $image_attributes = wp_get_attachment_image_src( $attachment_id = $partnerlogo, $size = 'large' ) ?>
     <?php if ( $image_attributes ) : ?>
@@ -73,16 +74,19 @@ foreach($term_vals as $key=>$val){
     <?php endif; ?>
     <?php endif; ?>
 </div>
+</div>
 <div class="wp-block-column">
+<div class="">
+
 	<div><a class="allpartnerslink" href="/learninghub/corporate-learning-partners/">All Partners</a></div>
 	<h1><?php echo $term->name ?></h1>
-		<?php //the_archive_title( '<h1 class="page-title">', '</h1>' ); ?>
-		<?php if ( $description ) : ?>
-			<div class=""><?php echo wp_kses_post( wpautop( $description ) ); ?></div>
-		<?php endif; ?>
-		<?php if(!empty($partnerurl)): ?>
+    <?php //the_archive_title( '<h1 class="page-title">', '</h1>' ); ?>
+    <?php if ( $description ) : ?>
+    <div class="" style="margin: 1.5em 0;"><?php echo wp_kses_post( wpautop( $description ) ); ?></div>
+    <?php endif; ?>
+    <?php if(!empty($partnerurl)): ?>
     <div>
-        <a class="partner-url" 
+        <a class="" 
             target="_blank" 
             rel="noopener" 
             href="<?= $partnerurl ?>">
@@ -91,6 +95,7 @@ foreach($term_vals as $key=>$val){
     </div>
     <?php endif ?>
 
+</div>
 </div>
 </div>
 </div>
@@ -114,34 +119,115 @@ foreach($catlist as $childcat) {
 //print_r($catlist);
 ?>
 </div>
-<div class="entry-content">
+
+
+
+<div class="alignwide">
+
+<div class="wp-block-columns alignfull"><!-- wp:column -->
+<div class="wp-block-column" style="flex: 66%;">
+
     <div id="courselist">
     <div class="searchbox">
     <input class="search form-control mb-3" placeholder="Type to filter courses">
 	</div>
 	<div class="list">
 	<?php while ($post_my_query->have_posts()) : $post_my_query->the_post(); ?>
-		
-		<?php get_template_part( 'template-parts/course/single-course' ) ?>
+    <?php get_template_part( 'template-parts/course/single-course' ) ?>
 	<?php endwhile; ?>
+    </div>
+    <div style="clear: both">
+    <?php twenty_twenty_one_the_posts_navigation(); ?>
+    </div>
+    <?php else : ?>
+    <?php get_template_part( 'template-parts/content/content-none' ); ?>
+    <?php endif; ?>
+
+    <script src="//cdnjs.cloudflare.com/ajax/libs/list.js/2.3.1/list.min.js"></script>
+    <script>
+
+    var courseoptions = {
+        valueNames: [ 'coursename', 'coursedesc', 'coursecats', 'coursekeys' ]
+    };
+    var courses = new List('courselist', courseoptions);
+
+
+    </script>
+
+
+
+
+
+
+
 </div>
 </div>
+<!-- /wp:column -->
+<!-- wp:column -->
+<div class="wp-block-column" style="flex: 29%; padding: 0 2%;">
+
+<h4>Suggested Courses</h4>
+<div style="background-color: #FFF; border-radius: 5px; padding: .5em;">
+<div>
+    <a href="/learninghub/foundational-courses/">Mandatory &amp; Foundational</a>
 </div>
-<div style="clear: both">
-	<?php twenty_twenty_one_the_posts_navigation(); ?>
+<div>
+    <a href="/learninghub/supervisors-and-managers/">Supervisors &amp; Managers</a>
 </div>
-<?php else : ?>
-	<?php get_template_part( 'template-parts/content/content-none' ); ?>
+<div>
+    <a href="/learninghub/leadership/">Leadership in the BCPS</a>
+</div>
+</div>
+<h4>Suggested Searches</h4>
+<div style="background-color: #FFF; border-radius: 5px; padding: .5em;">
+<div><a href="/learninghub/?s=flexibleBCPS">#flexibleBCPS</a></div>
+<p>Flexible workplaces? Managing remote teams? The courses and resources you need.</p>
+</div>
+<div style="background-color: #FFF; border-radius: 5px; margin-top: 1em; padding: .5em;">
+<div><a href="/learninghub/?s=BCPSBelonging">#BCPSBelonging</a></div>
+<p>Great courses that cover equity, diversity and inclusion.</p>
+</div>
+<?php 
+$news_args = array(
+    'post_type'                => 'post',
+    'post_status'              => 'publish',
+    'posts_per_page'           => 3,
+    'ignore_sticky_posts'      => 0,
+    'child_of'                 => 0,
+    'parent'                   => 0,
+    'orderby'                  => array('post_date' =>'ASC'),
+    'hide_empty'               => 0,
+    'hierarchical'             => 1,
+    'exclude'                  => '',
+    'include'                  => '',
+    'number'                   => '',
+    'pad_counts'               => true, 
+);
+$news = null;
+$news = new WP_Query($news_args);
+if( $news->have_posts() ) : ?>
+
+    <h4 class="alignwide">Recent News</h4>
+    <div style="background: #FFF; border-radius: 5px; padding: .5em;">
+    <?php while ($news->have_posts()) : $news->the_post(); ?>
+    <div>
+        <a href="<?= the_permalink() ?>">
+            <?= the_title() ?>
+        </a>
+    </div>
+    <?php endwhile ?>
+	</div>
+    
+<?php else: ?>
+    <p>No news is bad news?</p>
 <?php endif; ?>
+<?php wp_reset_query($news); ?>
 
-<script src="//cdnjs.cloudflare.com/ajax/libs/list.js/2.3.1/list.min.js"></script>
-<script>
+<!-- /wp:column -->
 
-var courseoptions = {
-    valueNames: [ 'coursename', 'coursedesc', 'coursecats', 'coursekeys' ]
-};
-var courses = new List('courselist', courseoptions);
+</div>
+</div>
+</div>
 
 
-</script>
 <?php get_footer(); ?>
