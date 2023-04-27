@@ -143,7 +143,7 @@ $news_args = array(
     'ignore_sticky_posts'      => 0,
     'child_of'                 => 0,
     'parent'                   => 0,
-    'orderby'                  => array('post_date' =>'ASC'),
+    'orderby'                  => array('post_date' =>'DESC'),
     'hide_empty'               => 0,
     'hierarchical'             => 1,
     'exclude'                  => '',
