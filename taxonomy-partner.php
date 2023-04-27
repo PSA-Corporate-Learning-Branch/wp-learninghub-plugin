@@ -189,43 +189,7 @@ foreach($catlist as $childcat) {
 <div><a href="/learninghub/?s=BCPSBelonging">#BCPSBelonging</a></div>
 <p>Great courses that cover equity, diversity and inclusion.</p>
 </div>
-<?php 
-$news_args = array(
-    'post_type'                => 'post',
-    'post_status'              => 'publish',
-    'posts_per_page'           => 3,
-    'ignore_sticky_posts'      => 0,
-    'child_of'                 => 0,
-    'parent'                   => 0,
-    'orderby'                  => array('post_date' =>'DESC'),
-    'hide_empty'               => 0,
-    'hierarchical'             => 1,
-    'exclude'                  => '',
-    'include'                  => '',
-    'number'                   => '',
-    'pad_counts'               => true, 
-);
-$news = null;
-$news = new WP_Query($news_args);
-if( $news->have_posts() ) : ?>
 
-    <h4 class="alignwide">Recent News</h4>
-    <div style="background: #FFF; border-radius: 5px; padding: .5em;">
-    <?php while ($news->have_posts()) : $news->the_post(); ?>
-    <div>
-        <a href="<?= the_permalink() ?>">
-            <?= the_title() ?>
-        </a>
-    </div>
-    <?php endwhile ?>
-	</div>
-    
-<?php else: ?>
-    <p>No news is bad news?</p>
-<?php endif; ?>
-<?php wp_reset_query($news); ?>
-
-<!-- /wp:column -->
 
 </div>
 </div>
