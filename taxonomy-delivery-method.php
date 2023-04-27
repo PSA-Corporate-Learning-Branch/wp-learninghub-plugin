@@ -45,7 +45,7 @@ $post_my_query = new WP_Query($post_args);
 
 <?php if( $post_my_query->have_posts() ) : ?>
 
-	<header class="entry-header alignfull" style="background: #FFF; padding: 2em 2em 3em 2em;">
+	<header class="entry-header alignfull" style="background: #FFF; margin: 0 0 2em 0; padding: 2em 2em 3em 2em;">
 		<div class="alignwide">
 	
 	<div>
@@ -88,9 +88,12 @@ foreach($methodlist as $method) {
 </div>
 </div>
 </div>
-	</header><!-- .page-header -->
+</header><!-- .page-header -->
 <div class="alignwide">
-<div class="entry-content">
+
+<div class="wp-block-columns alignfull"><!-- wp:column -->
+<div class="wp-block-column" style="flex: 66%;">
+
 	<div id="courselist">
     <div class="searchbox" style="margin-top: 1em">
     <input class="search form-control mb-3" placeholder="Type to filter courses">
@@ -102,8 +105,7 @@ foreach($methodlist as $method) {
 	<?php endwhile; ?>
 </div> <!-- /.list -->
 </div> <!-- /#courselist -->
-</div>
-</div>
+
 <div style="clear: both">
 	<?php twenty_twenty_one_the_posts_navigation(); ?>
 </div>
@@ -126,4 +128,77 @@ courses.on('searchComplete', function(){
 });
 
 </script>
+
+
+
+
+</div>
+<!-- /wp:column -->
+<!-- wp:column -->
+<div class="wp-block-column" style="flex: 29%; padding: 0 2%;">
+
+<h4>Suggested Courses</h4>
+<div style="background-color: #FFF; border-radius: 5px; padding: .5em;">
+<div>
+    <a href="/learninghub/foundational-courses/">Mandatory &amp; Foundational</a>
+</div>
+<div>
+    <a href="/learninghub/supervisors-and-managers/">Supervisors &amp; Managers</a>
+</div>
+<div>
+    <a href="/learninghub/leadership/">Leadership in the BCPS</a>
+</div>
+</div>
+<h4>Suggested Searches</h4>
+<div style="background-color: #FFF; border-radius: 5px; padding: .5em;">
+<div><a href="/learninghub/?s=flexibleBCPS">#flexibleBCPS</a></div>
+<p>Flexible workplaces? Managing remote teams? The courses and resources you need.</p>
+</div>
+<div style="background-color: #FFF; border-radius: 5px; margin-top: 1em; padding: .5em;">
+<div><a href="/learninghub/?s=BCPSBelonging">#BCPSBelonging</a></div>
+<p>Great courses that cover equity, diversity and inclusion.</p>
+</div>
+<?php 
+$news_args = array(
+    'post_type'                => 'post',
+    'post_status'              => 'publish',
+    'posts_per_page'           => 3,
+    'ignore_sticky_posts'      => 0,
+    'child_of'                 => 0,
+    'parent'                   => 0,
+    'orderby'                  => array('post_date' =>'DESC'),
+    'hide_empty'               => 0,
+    'hierarchical'             => 1,
+    'exclude'                  => '',
+    'include'                  => '',
+    'number'                   => '',
+    'pad_counts'               => true, 
+);
+$news = null;
+$news = new WP_Query($news_args);
+if( $news->have_posts() ) : ?>
+
+    <h4 class="alignwide">Recent News</h4>
+    <div style="background: #FFF; border-radius: 5px; padding: .5em;">
+    <?php while ($news->have_posts()) : $news->the_post(); ?>
+    <div>
+        <a href="<?= the_permalink() ?>">
+            <?= the_title() ?>
+        </a>
+    </div>
+    <?php endwhile ?>
+	</div>
+    
+<?php else: ?>
+    <p>No news is bad news?</p>
+<?php endif; ?>
+<?php wp_reset_query($news); ?>
+
+<!-- /wp:column -->
+
+</div>
+</div>
+</div>
+
+
 <?php get_footer(); ?>
