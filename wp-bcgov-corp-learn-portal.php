@@ -465,7 +465,18 @@ function course_elm_sync () {
                   wp_set_object_terms( $existingcourse->ID, $key, 'keywords', true);
               }
               wp_set_object_terms( $existingcourse->ID, sanitize_text_field($course->delivery_method), 'delivery_method', false);
-              wp_set_object_terms( $existingcourse->ID, sanitize_text_field($course->_learning_partner), 'learning_partner', false);
+
+              // ELM keywords have pretty short character limit but some partner have long names.
+              // In ELM, use an abbreviation and then manually map that here. It's not cool, but 
+              // we do what we have to do, ya?
+              if($course->_learning_partner == 'CIRMO') {
+                wp_set_object_terms( $existingcourse->ID, 'Corporate Information and Records Management Office', 'learning_partner', false);
+              } elseif ($course->_learning_partner == 'EMCR') {
+                  wp_set_object_terms( $existingcourse->ID, 'Emergency Management and Climate Readiness', 'learning_partner', false);
+              } else {
+                wp_set_object_terms( $existingcourse->ID, sanitize_text_field($course->_learning_partner), 'learning_partner', false);
+              }
+              
 
               if($course->url != $existingcourse->course_link) {
                 $existingcourse->course_link = esc_url_raw($course->url);
