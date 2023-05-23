@@ -473,6 +473,8 @@ function course_elm_sync () {
                 wp_set_object_terms( $existingcourse->ID, 'Corporate Information and Records Management Office', 'learning_partner', false);
               } elseif ($course->_learning_partner == 'EMCR') {
                   wp_set_object_terms( $existingcourse->ID, 'Emergency Management and Climate Readiness', 'learning_partner', false);
+              } elseif ($course->_learning_partner == 'DWCS') {
+                  wp_set_object_terms( $existingcourse->ID, 'Digital Workplace and Collaboration Services Branch', 'learning_partner', false);
               } else {
                 wp_set_object_terms( $existingcourse->ID, sanitize_text_field($course->_learning_partner), 'learning_partner', false);
               }
