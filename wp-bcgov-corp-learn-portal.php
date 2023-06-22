@@ -466,6 +466,8 @@ function course_elm_sync () {
               }
               wp_set_object_terms( $existingcourse->ID, sanitize_text_field($course->delivery_method), 'delivery_method', false);
 
+              // TODO OK so the following is redundant and should not be happening at this layer; LSApp
+              // handles this mapping on that side! Make sure these partners are accounted for there!
               // ELM keywords have pretty short character limit but some partner have long names.
               // In ELM, use an abbreviation and then manually map that here. It's not cool, but 
               // we do what we have to do, ya?
@@ -479,11 +481,13 @@ function course_elm_sync () {
                 wp_set_object_terms( $existingcourse->ID, sanitize_text_field($course->_learning_partner), 'learning_partner', false);
               }
               
-
               if($course->url != $existingcourse->course_link) {
-                $existingcourse->course_link = esc_url_raw($course->url);
+                //$existingcourse->course_link = esc_url_raw($course->url);
+                //  update_post_meta( $post->ID, 'meta-key', 'meta_value' );
+                update_post_meta( $existingcourse->ID, 'course_link', $course->url );
                 $updated = 1;
               }
+              
               
               if($existingcourse->elm_course_code != $course->id) {
                 $existingcourse->elm_course_code = $course->id;
