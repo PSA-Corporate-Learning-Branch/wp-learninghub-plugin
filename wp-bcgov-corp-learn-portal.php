@@ -340,7 +340,7 @@ function systems_sync() {
     echo '<p><strong>*NOTE</strong> that if the course existed previously, but is now no ';
     echo 'longer in the feed, it will remain set to "private" and not published on the site.</p>';
     echo '<div>';
-    $go = admin_url('edit.php?noheader=true&post_type=course&page=course_mark_all_private');
+    $go = admin_url('edit.php?noheader=true&post_type=course&page=course_elm_sync');
     echo '<a href="'.$go.'" ';
     echo 'style="background-color: #222; color: #FFF; display: inline-block; padding: .75em 2em;">';
     echo 'Start synchronization with PSA Learning System';
@@ -410,6 +410,153 @@ function course_mark_all_private () {
 }
 
 function course_elm_sync () {
+  if ( !current_user_can( 'edit_posts' ) )  {
+    wp_die( __( 'You do not have sufficient permissions to access this page.' ) );
+  }
+  /**
+   * Now that all those courses are private and have had their taxonomy terms stripped, 
+   * let's grab the public listing of courses from the PSA Learning System and loop 
+   * through those, updating existing ones as required and publishing new ones.
+   * Old feed:
+   * https://learn.bcpublicservice.gov.bc.ca/learningcentre/courses/feed.json
+   */
+  
+  /**
+   * This process generally takes longer that 30 seconds, at least on the OpenShift platform,
+   * so we need to set the timeout to longer than that. We're going to double that here to 
+   * 60 seconds, because if it takes longer than that, I should think that we might reconsider
+   * the approach here and maybe do this in batches?
+   */
+  //set_time_limit(60);
+
+  $feed = file_get_contents('https://learn.bcpublicservice.gov.bc.ca/learning-hub/learning-partner-courses.json');
+  $courses = json_decode($feed);
+  echo '<h3>' . count($courses->items) . ' Courses.</h3>';
+
+  $existingcourses = [];
+  $newcourses = [];
+  foreach($courses->items as $course) {
+
+      if(!empty($course->title)) {
+          $existing = post_exists($course->title);
+          if($existing) {
+              // Get existing course details
+              $existingcourse = get_post($existing);
+              // Check the basics to see if details match; if they don't
+              // then update them wile incrementing the $updated variable
+              // so that we can show which courses have been updated
+              // in the UI
+              if($existingcourse->post_content != $course->summary) {
+
+                  $existingcourse->post_content = $course->summary;
+                  // set updated to 1 so that we know to add this course to 
+                  // the updated courses list that we will show in the UI
+                  $updated = 1;
+              }
+
+              $cats = explode(',', $course->tags);
+              foreach($cats as $cat) {
+                  $catesc = sanitize_text_field($cat);
+                  wp_set_object_terms( $existingcourse->ID, $catesc, 'course_category', true);
+              }
+              $keywords = explode(',', $course->_keywords);
+              foreach($keywords as $key) {
+                  $keyesc = sanitize_text_field($key);
+                  wp_set_object_terms( $existingcourse->ID, $key, 'keywords', true);
+              }
+              wp_set_object_terms( $existingcourse->ID, sanitize_text_field($course->delivery_method), 'delivery_method', false);
+
+              // TODO OK so the following is redundant and should not be happening at this layer; LSApp
+              // handles this mapping on that side! Make sure these partners are accounted for there!
+              // ELM keywords have pretty short character limit but some partner have long names.
+              // In ELM, use an abbreviation and then manually map that here. It's not cool, but 
+              // we do what we have to do, ya?
+              if($course->_learning_partner == 'CIRMO') {
+                wp_set_object_terms( $existingcourse->ID, 'Corporate Information and Records Management Office', 'learning_partner', false);
+              } elseif ($course->_learning_partner == 'EMCR') {
+                  wp_set_object_terms( $existingcourse->ID, 'Emergency Management and Climate Readiness', 'learning_partner', false);
+              } elseif ($course->_learning_partner == 'DWCS') {
+                  wp_set_object_terms( $existingcourse->ID, 'Digital Workplace and Collaboration Services Branch', 'learning_partner', false);
+              } else {
+                wp_set_object_terms( $existingcourse->ID, sanitize_text_field($course->_learning_partner), 'learning_partner', false);
+              }
+              
+              if($course->url != $existingcourse->course_link) {
+                //$existingcourse->course_link = esc_url_raw($course->url);
+                //  update_post_meta( $post->ID, 'meta-key', 'meta_value' );
+                update_post_meta( $existingcourse->ID, 'course_link', $course->url );
+                $updated = 1;
+              }
+              
+              
+              if($existingcourse->elm_course_code != $course->id) {
+                $existingcourse->elm_course_code = $course->id;
+                  // set updated to 1 so that we know to add this course to 
+                  // the updated courses list that we will show in the UI
+                  $updated = 1;
+              }
+
+              // Even if there aren't any changes, if the course exists in
+              // the feed then we need to set this back to publish. In this
+              // way, if the course no longer exists in the feed, it won't
+              // get changed back and will remain private
+              $existingcourse->post_status = 'publish';
+
+              wp_update_post( $existingcourse );
+              // We loop through $existingcourses below
+              if($updated > 0) {
+                  array_push($existingcourses,$existingcourse);
+              }
+              // set back to 0 so it doesn't trigger on the next loop
+              $updated = 0;
+              
+          } else { // This course does NOT already exist, so we create it
+
+              // Set up the new course with basic settings in place
+              $new_course = array(
+                  'post_title' => sanitize_text_field($course->title),
+                  'post_type' => 'course',
+                  'post_status' => 'publish', 
+                  'post_content' => sanitize_text_field($course->summary),
+                  'post_excerpt' => substr(sanitize_text_field($course->summary), 0, 100),
+                  'meta_input'   => array(
+                      'course_link' => esc_url_raw($course->url),
+                      'elm_course_code' => $course->id
+                  )
+              );
+              // Actually create the new post so that we can move on 
+              // to updating it with taxonomy etc
+              $post_id = wp_insert_post( $new_course );
+
+              wp_set_object_terms( $post_id, sanitize_text_field($course->delivery_method), 'delivery_method', false);
+              wp_set_object_terms( $post_id, sanitize_text_field($course->_learning_partner), 'learning_partner', false);
+              wp_set_object_terms( $post_id, 'PSA Learning System', 'external_system', false);
+
+              if(!empty($course->_keywords)) {
+                  $keywords = explode(',', $course->_keywords);
+                  foreach($keywords as $key) {
+                      $keyesc = sanitize_text_field($key);
+                      wp_set_object_terms( $post_id, $keyesc, 'keywords', true);
+                  }
+              }
+              if(!empty($course->tags)) {
+                  $cats = explode(',', $course->tags);
+                  foreach($cats as $cat) {
+                    $catesc = sanitize_text_field($cat);
+                      wp_set_object_terms( $post_id, $catesc, 'course_category', true);
+                  }
+              }
+              array_push($newcourses,$post_id);
+          }
+      }
+  }
+  
+  echo '<h1>' . count($existingcourses) . ' courses Updated.</h1>';
+  echo '<h1>' . count($newcourses) . ' new courses created.</h1>';
+
+}
+
+function OLD_course_elm_sync () {
   if ( !current_user_can( 'edit_posts' ) )  {
     wp_die( __( 'You do not have sufficient permissions to access this page.' ) );
   }
