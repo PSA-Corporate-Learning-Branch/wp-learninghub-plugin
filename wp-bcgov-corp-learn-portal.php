@@ -324,7 +324,9 @@ function course_menu() {
 add_action( 'admin_menu', 'course_menu' );
 
 /**
- * Synchronize with the public feed for the PSA Learning System (ELM)
+ * Create an index jumping off point to the system sync processes.
+ * Currently both PSA Learning System (ELM) and LearningHUB are being 
+ * supported.
  */
 function systems_sync() {
 
@@ -341,7 +343,9 @@ function systems_sync() {
 
 }
 
-
+/**
+ * Synchronize with the public feed for the PSA Learning System (ELM)
+ */
 function course_elm_sync () {
 
   if ( !current_user_can( 'edit_posts' ) )  {
@@ -349,8 +353,8 @@ function course_elm_sync () {
   }
 
   // Get the feed and parse it into an array.
-  $f = file_get_contents('https://bigaddposse.com/learning-partner-courses.json');
-  //$f = file_get_contents('https://learn.bcpublicservice.gov.bc.ca/learning-hub/learning-partner-courses.json');
+  // $f = file_get_contents('https://bigaddposse.com/learning-partner-courses.json');
+  $f = file_get_contents('https://learn.bcpublicservice.gov.bc.ca/learning-hub/learning-partner-courses.json');
   $feed = json_decode($f);
   
   // Create a simple index of course names that are in the feed
@@ -440,8 +444,9 @@ function course_elm_sync () {
               }
           }
 
-          // compare more throughly for any updates
-          // if everything is the same, move on.
+          // Compare more throughly for any updates.
+          // If everything is the same then we're not actually touching the 
+          // database at all in this process.
           if($feedcourse->summary != $course->post_content) {
               // update post content
               $course->post_content = $feedcourse->summary;
@@ -464,7 +469,7 @@ function course_elm_sync () {
           // Load up the categories currently associated with the course
           $coursecats = get_the_terms($course->ID,'course_category');
           if(!empty($coursecats)) {
-            // Update the course with the feed categories
+            // Update the course with the feed categories.
             wp_set_object_terms( $course->ID, $feedcats, 'course_category', false);
             // But now we also need to account for categories that have been 
             // removed, so we quickly create an index of the existing ones to 
@@ -474,7 +479,7 @@ function course_elm_sync () {
               array_push($ccindex,$cc->name);
             }
             // Loop through each of the existing cats so as to remove terms 
-            // which don't exist in the terms in the feed
+            // which don't exist in the terms in the feed.
             foreach($coursecats as $cc) {
                 if(!in_array($cc->name, $feedcats)) {
                     // The name of this course cat isn't in the feed cats
@@ -484,13 +489,13 @@ function course_elm_sync () {
             }
           }
 
-          // Get the keywords for this course from the feed
+          // Repeat the process above but for keywords instead of categories.
+          // Get the keywords for this course from the feed.
           $feedkeys = explode(',', $feedcourse->_keywords);
-          //print_r($feedkeys); exit;
-          // Load up the categories currently associated with the course
+          // Load up the categories currently associated with the course.
           $coursekeys = get_the_terms($course->ID,'keywords');
           if(!empty($coursekeys)) {
-            // Update the course with the feed keywords
+            // Update the course with the feed keywords.
             wp_set_object_terms( $course->ID, $feedkeys, 'keywords', false);
             // But now we also need to account for keywords that have been 
             // removed, so we quickly create an index of the existing ones to 
@@ -499,18 +504,18 @@ function course_elm_sync () {
             foreach($coursekeys as $kc) {
               array_push($ckindex,$kc->name);
             }
-            // Loop through each of the existing cats so as to remove terms 
+            // Loop through each of the existing keywords so as to remove terms 
             // which don't exist in the terms in the feed
             foreach($coursekeys as $ck) {
                 if(!in_array($ck->name, $ckindex)) {
-                    // The name of this course cat isn't in the feed cat
-                    // Delete the old category!
+                    // The name of this course key isn't in the feed keys
+                    // Delete the old keyword!
                     wp_remove_object_terms( $course->ID, $ck->name, 'keywords' );
 
                 }
             }
           }
-
+          // Coming into the home stretch updating the partner and delivery method.
           $coursepartner = get_the_terms($course->ID,'learning_partner');
           // There's only ever one partner #TODO support multiple partners?
           if($coursepartner[0]->name != $feedcourse->_learning_partner) {
@@ -524,8 +529,8 @@ function course_elm_sync () {
 
       } else { // Does the course title match a title that's in the feed?
 
-          // This course is not in the feed anymore
-          // Make it PRIVATE
+          // This course is not in the feed anymore.
+          // Make it PRIVATE.
           $course->post_status = 'private';
           wp_update_post( $course );
 
@@ -564,22 +569,13 @@ function course_elm_sync () {
           wp_set_object_terms( $post_id, 'PSA Learning System', 'external_system', false);
 
           if(!empty($feedcourse->_keywords)) {
-              $keywords = explode(',', $feedcourse->_keywords);
-              // #TODO you don't need the loop here or for the keywords below just pass the array
-              foreach($keywords as $key) {
-                  $keyesc = sanitize_text_field($key);
-                  wp_set_object_terms( $post_id, $keyesc, 'keywords', true);
-              }
+            $keywords = explode(',', $feedcourse->_keywords);
+            wp_set_object_terms( $post_id, $keywords, 'keywords', true);
           }
           if(!empty($feedcourse->tags)) {
-              $cats = explode(',', $feedcourse->tags);
-              foreach($cats as $cat) {
-                $catesc = sanitize_text_field($cat);
-                  wp_set_object_terms( $post_id, $catesc, 'course_category', true);
-              }
+            $cats = explode(',', $feedcourse->tags);
+            wp_set_object_terms( $post_id, $cats, 'course_category', true);
           }
-
-
 
       } 
       // otherwise, we've already dealt with things in the previous loop 
@@ -588,7 +584,6 @@ function course_elm_sync () {
 
   header('Location: /learninghub/wp-admin/edit.php?post_type=course');
 }
-
 
 /* Fire our meta box setup function on the post editor screen. */
 add_action( 'load-post.php', 'courses_meta_boxes_setup' );
