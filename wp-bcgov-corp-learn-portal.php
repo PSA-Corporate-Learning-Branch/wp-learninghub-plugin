@@ -349,32 +349,44 @@ function systems_sync() {
 
 }
 
-function course_mark_all_private () {
-    
-    if ( !current_user_can( 'edit_posts' ) )  {
-      wp_die( __( 'You do not have sufficient permissions to access this page.' ) );
-    }
-    /**
-     * This process generally takes longer that 30 seconds, at least on the OpenShift platform,
-     * so we need to set the timeout to longer than that. We're going to double that here to 
-     * 60 seconds, because if it takes longer than that, I should think that we might reconsider
-     * the approach here and maybe do this in batches?
-     */
-    set_time_limit(60);
 
-    /**
-     * First let's make every page private so that if the course is no longer in the catalog, 
-     * that it gets removed from the listing here. Note that we're just making these courses
-     * private, and NOT deleting them. We're going to loop through the source catalog after 
-     * this, and if the post already exists and nothing has changed, then we just make it 
-     * published again and move on. We could just delete them, and may change to that in 
-     * the future, depending on feedback.
-     * 
-     */
-    $all_posts = get_posts(array(
+function course_elm_sync () {
+
+  if ( !current_user_can( 'edit_posts' ) )  {
+    wp_die( __( 'You do not have sufficient permissions to access this page.' ) );
+  }
+
+  // Get the feed and parse it into an array.
+  $f = file_get_contents('https://learn.bcpublicservice.gov.bc.ca/learning-hub/learning-partner-courses.json');
+  $feed = json_decode($f);
+  // Create a simple index of course names that are in the feed
+  // so that we can easily use in_array to compare against while
+  // we loop through all the published courses.
+  $feedindex = [];
+  foreach($feed as $feedcourse) {
+      array_push($feedindex, $feedcourse->title);
+  }
+  // Now we can loop through each of the exisiting published courses
+  // and check each against the feedindex array.
+  //
+  // If we find a match, then we can look to updating. We need to be able 
+  // lookup particlar feedcourse details from the $feed in order to do this,
+  // so we create a lookup function below to facilitate.
+  // 
+  // If there isn't a match, then the course isn't in the feed and needs to 
+  // be made private.
+  //
+  // This loop through published courses only covers updates to exisiting 
+  // courses and marking private (removing) courses that aren't in the feed.
+  // After this loop is complete we do another run through the individual 
+  // courses in the feed to cover adding any new courses that don't exist yet.
+  // 
+  // Start by getting all the courses that are listed as being in the 
+  // PSA Learning System.
+  $courses = get_posts(array(
       'post_type' => 'course',
       'numberposts' => -1,
-      'post_status'    => 'any',
+      'post_status'    => 'any', // should be published, no??
       'tax_query' => array(
           array(
           'taxonomy' => 'external_system',
@@ -382,178 +394,156 @@ function course_mark_all_private () {
           'terms' => 'psa-learning-system')
       ))
     );
-    /**
-     * In order to actually synchronize and not just add new terms, we go through each taxonomy
-     * and delete all of its terms. If we don't do this, then we go through our feed and update
-     * we will _only add_ new terms to whatever course we're looking at, instead of removing them
-     * For example, if we change the learning partner of a course, without this we'd have courses 
-     * that belong to many partners (its history, if you will). This is expensive but necessary
-     * unless we take another look at straight-up deleting the courses and re-creating them
-     * wholesale upon each sync (daily). This might work, but the internal wordpress IDs would
-     * start to inflate somewhat dramatically... imagine after a year or daily syncs where a couple
-     * hundred courses are created 260x200=52000 posts per year???
-     */
-  
-    foreach ($all_posts as $single_post){
-        $single_post->post_status = 'private';
-        wp_delete_object_term_relationships( $single_post->ID, 'course_category' );
-        wp_delete_object_term_relationships( $single_post->ID, 'learning_partner' );
-        wp_delete_object_term_relationships( $single_post->ID, 'keywords' );
-        wp_delete_object_term_relationships( $single_post->ID, 'delivery_method' );
-        wp_update_post( $single_post );
-    }
-    //echo '<div><a href="' . admin_url('edit.php?post_type=course&page=course_elm_sync'). '" ';
-    //echo 'style="background-color: #222; color: #FFF; display: inline-block; padding: .75em 2em;">';
-    //echo 'Run Sync</a></div>';
-    $go = 'Location: ' . admin_url('edit.php?post_type=course&page=course_elm_sync');
-    header($go);
-}
 
-function course_elm_sync () {
-  if ( !current_user_can( 'edit_posts' ) )  {
-    wp_die( __( 'You do not have sufficient permissions to access this page.' ) );
-  }
-  /**
-   * Now that all those courses are private and have had their taxonomy terms stripped, 
-   * let's grab the public listing of courses from the PSA Learning System and loop 
-   * through those, updating existing ones as required and publishing new ones.
-   * Old feed:
-   * https://learn.bcpublicservice.gov.bc.ca/learningcentre/courses/feed.json
-   */
-  
-  /**
-   * This process generally takes longer that 30 seconds, at least on the OpenShift platform,
-   * so we need to set the timeout to longer than that. We're going to double that here to 
-   * 60 seconds, because if it takes longer than that, I should think that we might reconsider
-   * the approach here and maybe do this in batches?
-   */
-  //set_time_limit(60);
+  // Loop though all the PSALS courses in the system.
+  foreach ($courses as $course) {
+      // Start by adding all the course titles to an index array so that
+      // after this loop runs through, we can loop through the feed again
+      // and find the courses that are new and need to be created from scratch.
+      array_push($courseindex, $course->post_title);
+      // Does the course title match a title that's in the feed?
+      if(in_array($course->post_title, $feedindex)) {
 
-  $feed = file_get_contents('https://learn.bcpublicservice.gov.bc.ca/learning-hub/learning-partner-courses.json');
-  $courses = json_decode($feed);
-  echo '<h3>' . count($courses->items) . ' Courses.</h3>';
-
-  $existingcourses = [];
-  $newcourses = [];
-  foreach($courses->items as $course) {
-
-      if(!empty($course->title)) {
-          $existing = post_exists($course->title);
-          if($existing) {
-              // Get existing course details
-              $existingcourse = get_post($existing);
-              // Check the basics to see if details match; if they don't
-              // then update them wile incrementing the $updated variable
-              // so that we can show which courses have been updated
-              // in the UI
-              if($existingcourse->post_content != $course->summary) {
-
-                  $existingcourse->post_content = $course->summary;
-                  // set updated to 1 so that we know to add this course to 
-                  // the updated courses list that we will show in the UI
-                  $updated = 1;
+          // Get the details for the feedcourse so we can compare
+          foreach($feed as $f) {
+              if($f->title == $course->post_title) {
+                $feedcourse = $f;
               }
-
-              $cats = explode(',', $course->tags);
-              foreach($cats as $cat) {
-                  $catesc = sanitize_text_field($cat);
-                  wp_set_object_terms( $existingcourse->ID, $catesc, 'course_category', true);
-              }
-              $keywords = explode(',', $course->_keywords);
-              foreach($keywords as $key) {
-                  $keyesc = sanitize_text_field($key);
-                  wp_set_object_terms( $existingcourse->ID, $key, 'keywords', true);
-              }
-              wp_set_object_terms( $existingcourse->ID, sanitize_text_field($course->delivery_method), 'delivery_method', false);
-
-              // TODO OK so the following is redundant and should not be happening at this layer; LSApp
-              // handles this mapping on that side! Make sure these partners are accounted for there!
-              // ELM keywords have pretty short character limit but some partner have long names.
-              // In ELM, use an abbreviation and then manually map that here. It's not cool, but 
-              // we do what we have to do, ya?
-              if($course->_learning_partner == 'CIRMO') {
-                wp_set_object_terms( $existingcourse->ID, 'Corporate Information and Records Management Office', 'learning_partner', false);
-              } elseif ($course->_learning_partner == 'EMCR') {
-                  wp_set_object_terms( $existingcourse->ID, 'Emergency Management and Climate Readiness', 'learning_partner', false);
-              } elseif ($course->_learning_partner == 'DWCS') {
-                  wp_set_object_terms( $existingcourse->ID, 'Digital Workplace and Collaboration Services Branch', 'learning_partner', false);
-              } else {
-                wp_set_object_terms( $existingcourse->ID, sanitize_text_field($course->_learning_partner), 'learning_partner', false);
-              }
-              
-              if($course->url != $existingcourse->course_link) {
-                //$existingcourse->course_link = esc_url_raw($course->url);
-                //  update_post_meta( $post->ID, 'meta-key', 'meta_value' );
-                update_post_meta( $existingcourse->ID, 'course_link', $course->url );
-                $updated = 1;
-              }
-              
-              
-              if($existingcourse->elm_course_code != $course->id) {
-                $existingcourse->elm_course_code = $course->id;
-                  // set updated to 1 so that we know to add this course to 
-                  // the updated courses list that we will show in the UI
-                  $updated = 1;
-              }
-
-              // Even if there aren't any changes, if the course exists in
-              // the feed then we need to set this back to publish. In this
-              // way, if the course no longer exists in the feed, it won't
-              // get changed back and will remain private
-              $existingcourse->post_status = 'publish';
-
-              wp_update_post( $existingcourse );
-              // We loop through $existingcourses below
-              if($updated > 0) {
-                  array_push($existingcourses,$existingcourse);
-              }
-              // set back to 0 so it doesn't trigger on the next loop
-              $updated = 0;
-              
-          } else { // This course does NOT already exist, so we create it
-
-              // Set up the new course with basic settings in place
-              $new_course = array(
-                  'post_title' => sanitize_text_field($course->title),
-                  'post_type' => 'course',
-                  'post_status' => 'publish', 
-                  'post_content' => sanitize_text_field($course->summary),
-                  'post_excerpt' => substr(sanitize_text_field($course->summary), 0, 100),
-                  'meta_input'   => array(
-                      'course_link' => esc_url_raw($course->url),
-                      'elm_course_code' => $course->id
-                  )
-              );
-              // Actually create the new post so that we can move on 
-              // to updating it with taxonomy etc
-              $post_id = wp_insert_post( $new_course );
-
-              wp_set_object_terms( $post_id, sanitize_text_field($course->delivery_method), 'delivery_method', false);
-              wp_set_object_terms( $post_id, sanitize_text_field($course->_learning_partner), 'learning_partner', false);
-              wp_set_object_terms( $post_id, 'PSA Learning System', 'external_system', false);
-
-              if(!empty($course->_keywords)) {
-                  $keywords = explode(',', $course->_keywords);
-                  foreach($keywords as $key) {
-                      $keyesc = sanitize_text_field($key);
-                      wp_set_object_terms( $post_id, $keyesc, 'keywords', true);
-                  }
-              }
-              if(!empty($course->tags)) {
-                  $cats = explode(',', $course->tags);
-                  foreach($cats as $cat) {
-                    $catesc = sanitize_text_field($cat);
-                      wp_set_object_terms( $post_id, $catesc, 'course_category', true);
-                  }
-              }
-              array_push($newcourses,$post_id);
           }
+          // compare more throughly for any updates
+          // if everything is the same, move on.
+          if($feedcourse->summary != $course->post_content) {
+              // update post content
+              $course->post_content = $feedcourse->summary;
+              // #TODO post_excerpt too!
+          }
+          if($feedcourse->url != $course->course_link) {
+              update_post_meta( $course->ID, 'course_link', $feedcourse->url );
+          }
+          // That's it for core details, so let's update the post
+          // After this we're updating the taxonomies which happens with separate
+          // functions.
+          wp_update_post( $course );
+
+          // Get the categories for this course from the feed
+          $feedcats = explode(',', $feedcourse->tags);
+          // Load up the categories currently associated with the course
+          $coursecats = get_the_terms($course->ID,'course_category');
+          // Loop through each of the existing cats so as to remove terms 
+          // which don't exist in the terms in the feed
+          foreach($coursecats as $cc) {
+              if(!in_array($cc->name, $feedcats)) {
+                  // The name of this course cat isn't in the feed cats
+                  // Delete the old category!
+                  wp_remove_object_terms( $course->ID, $cc->name, 'course_category' );
+              }
+          }
+          // Now loop through each of the cats in the feed to add any new terms
+          foreach($feedcats as $fc) {
+              if(!in_array($fc->name, $coursecats)) {
+                  // The name of this feed cat isn't in the course cats
+                  // Add the new category!
+                  wp_set_object_terms( $course->ID, sanitize_text_field($cc->name), 'course_category', false);                
+              }
+          }
+
+          // Get the keywords for this course from the feed
+          $feedkeys = explode(',', $feedcourse->_keywords);
+          // Load up the categories currently associated with the course
+          $coursekeys = get_the_terms($course->ID,'keywords');
+          // Loop through each of the existing cats so as to remove terms 
+          // which don't exist in the terms in the feed
+          foreach($coursekeys as $ck) {
+              if(!in_array($ck->name, $feedkeys)) {
+                  // The name of this course cat isn't in the feed cat
+                  // Delete the old category!
+                  wp_remove_object_terms( $course->ID, $ck->name, 'keywords' );
+
+              }
+          }
+          // Now loop through each of the cats in the feed to add any new terms
+          foreach($feedkeys as $fc) {
+              if(!in_array($fc->name, $coursekeys)) {
+                  // The name of this feed cat isn't in the course cat
+                  // Add the new category!
+                  wp_set_object_terms( $course->ID, sanitize_text_field($fc->name), 'keywords', false);                
+              }
+          }
+
+          $coursepartner = get_the_terms($course->ID,'learning_partner');
+          if($coursepartner[0]->name != $feedcourse->_learning_partner) {
+              wp_set_object_terms( $course->ID, sanitize_text_field($feedcourse->_learning_partner), 'learning_partner', false);
+          }
+          
+          $coursemethod = get_the_terms($course->ID,'delivery_method');
+          if($coursemethod[0]->name != $feedcourse->delivery_method) {
+              wp_set_object_terms( $course->ID, sanitize_text_field($feedcourse->delivery_method), 'delivery_method', false);
+          }
+
+      } else { // Does the course title match a title that's in the feed?
+
+          // This course is not in the feed anymore
+          // Make it PRIVATE
+          $course->post_status = 'private';
+          wp_update_post( $course );
+
       }
   }
-  
-  echo '<h1>' . count($existingcourses) . ' courses Updated.</h1>';
-  echo '<h1>' . count($newcourses) . ' new courses created.</h1>';
 
+  // Next, let's loop through the feed again, this time looking at the newly created
+  // $courseindex array with just the published course names in it for easy lookup
+  //
+  // If the course doesn't exist within the catalog yet, then we create it!
+  //
+  foreach($feed as $feedcourse) {
+
+      if(!in_array($feedcourse->title, $courseindex)) {
+
+          // This course isn't in the list of published courses
+          // so it is new, so we need to create this course from scratch.
+          // Set up the new course with basic settings in place
+          $new_course = array(
+              'post_title' => sanitize_text_field($feedcourse->title),
+              'post_type' => 'course',
+              'post_status' => 'publish', 
+              'post_content' => sanitize_text_field($feedcourse->summary),
+              'post_excerpt' => substr(sanitize_text_field($feedcourse->summary), 0, 100),
+              'meta_input'   => array(
+                  'course_link' => esc_url_raw($feedcourse->url),
+                  'elm_course_code' => $feedcourse->id
+              )
+          );
+          // Actually create the new post so that we can move on 
+          // to updating it with taxonomy etc
+          $post_id = wp_insert_post( $new_course );
+
+          wp_set_object_terms( $post_id, sanitize_text_field($feedcourse->delivery_method), 'delivery_method', false);
+          wp_set_object_terms( $post_id, sanitize_text_field($feedcourse->_learning_partner), 'learning_partner', false);
+          wp_set_object_terms( $post_id, 'PSA Learning System', 'external_system', false);
+
+          if(!empty($feedcourse->_keywords)) {
+              $keywords = explode(',', $feedcourse->_keywords);
+              foreach($keywords as $key) {
+                  $keyesc = sanitize_text_field($key);
+                  wp_set_object_terms( $post_id, $keyesc, 'keywords', true);
+              }
+          }
+          if(!empty($feedcourse->tags)) {
+              $cats = explode(',', $feedcourse->tags);
+              foreach($cats as $cat) {
+                $catesc = sanitize_text_field($cat);
+                  wp_set_object_terms( $post_id, $catesc, 'course_category', true);
+              }
+          }
+
+
+
+      } 
+      // otherwise, we've already dealt with things in the previous loop 
+      // so do nothing else
+  }
+
+  header('Location: /learninghub/wp-admin/edit.php?post_type=course');
 }
 
 function OLD_course_elm_sync () {
