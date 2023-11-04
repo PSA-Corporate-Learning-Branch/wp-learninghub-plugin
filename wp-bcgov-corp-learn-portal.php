@@ -357,13 +357,15 @@ function course_elm_sync () {
   }
 
   // Get the feed and parse it into an array.
-  $f = file_get_contents('https://learn.bcpublicservice.gov.bc.ca/learning-hub/learning-partner-courses.json');
+  $f = file_get_contents('https://bigaddposse.com/learning-partner-courses.json');
+  //$f = file_get_contents('https://learn.bcpublicservice.gov.bc.ca/learning-hub/learning-partner-courses.json');
   $feed = json_decode($f);
+  
   // Create a simple index of course names that are in the feed
   // so that we can easily use in_array to compare against while
   // we loop through all the published courses.
   $feedindex = [];
-  foreach($feed as $feedcourse) {
+  foreach($feed->items as $feedcourse) {
       array_push($feedindex, $feedcourse->title);
   }
   // Now we can loop through each of the exisiting published courses
@@ -394,9 +396,37 @@ function course_elm_sync () {
           'terms' => 'psa-learning-system')
       ))
     );
-
+//     WP_Post Object
+// (
+//     [ID] =>
+//     [post_author] =>
+//     [post_date] => 
+//     [post_date_gmt] => 
+//     [post_content] => 
+//     [post_title] => 
+//     [post_excerpt] => 
+//     [post_status] =>
+//     [comment_status] =>
+//     [ping_status] => 
+//     [post_password] => 
+//     [post_name] =>
+//     [to_ping] => 
+//     [pinged] => 
+//     [post_modified] => 
+//     [post_modified_gmt] =>
+//     [post_content_filtered] => 
+//     [post_parent] => 
+//     [guid] => 
+//     [menu_order] =>
+//     [post_type] =>
+//     [post_mime_type] => 
+//     [comment_count] =>
+//     [filter] =>
+// )
+  $courseindex = [];
   // Loop though all the PSALS courses in the system.
   foreach ($courses as $course) {
+    //echo 'Tit: ' . $course->post_status . $course->post_title . '<br>'; exit;
       // Start by adding all the course titles to an index array so that
       // after this loop runs through, we can loop through the feed again
       // and find the courses that are new and need to be created from scratch.
@@ -405,11 +435,12 @@ function course_elm_sync () {
       if(in_array($course->post_title, $feedindex)) {
 
           // Get the details for the feedcourse so we can compare
-          foreach($feed as $f) {
+          foreach($feed->items as $f) {
               if($f->title == $course->post_title) {
                 $feedcourse = $f;
               }
           }
+          //print_r($feedcourse); exit;
           // compare more throughly for any updates
           // if everything is the same, move on.
           if($feedcourse->summary != $course->post_content) {
@@ -420,41 +451,55 @@ function course_elm_sync () {
           if($feedcourse->url != $course->course_link) {
               update_post_meta( $course->ID, 'course_link', $feedcourse->url );
           }
+          // Make sure it's published just in case we're matching against a 
+          // course that is currently private.
+          $course->post_status = 'publish';
           // That's it for core details, so let's update the post
           // After this we're updating the taxonomies which happens with separate
           // functions.
-          wp_update_post( $course );
+          wp_update_post($course);
 
           // Get the categories for this course from the feed
           $feedcats = explode(',', $feedcourse->tags);
           // Load up the categories currently associated with the course
           $coursecats = get_the_terms($course->ID,'course_category');
-          // Loop through each of the existing cats so as to remove terms 
-          // which don't exist in the terms in the feed
-          foreach($coursecats as $cc) {
-              if(!in_array($cc->name, $feedcats)) {
-                  // The name of this course cat isn't in the feed cats
-                  // Delete the old category!
-                  wp_remove_object_terms( $course->ID, $cc->name, 'course_category' );
-              }
-          }
-          // Now loop through each of the cats in the feed to add any new terms
-          foreach($feedcats as $fc) {
-              if(!in_array($fc->name, $coursecats)) {
-                  // The name of this feed cat isn't in the course cats
-                  // Add the new category!
-                  wp_set_object_terms( $course->ID, sanitize_text_field($cc->name), 'course_category', false);                
-              }
+          if(!empty($coursecats)) {
+            $ccindex = [];
+            foreach($coursecats as $cc) {
+              array_push($ccindex,$cc->name);
+            }
+            // Loop through each of the existing cats so as to remove terms 
+            // which don't exist in the terms in the feed
+            foreach($coursecats as $cc) {
+                if(!in_array($cc->name, $feedcats)) {
+                    // The name of this course cat isn't in the feed cats
+                    // Delete the old category!
+                    wp_remove_object_terms( $course->ID, $cc->name, 'course_category' );
+                }
+            }
+            // Now loop through each of the cats in the feed to add any new terms
+            foreach($feedcats as $fc) {
+                if(!in_array($fc->name, $ccindex)) {
+                    // The name of this feed cat isn't in the course cats
+                    // Add the new category!
+                    wp_set_object_terms( $course->ID, sanitize_text_field($cc->name), 'course_category', false);                
+                }
+            }
           }
 
           // Get the keywords for this course from the feed
           $feedkeys = explode(',', $feedcourse->_keywords);
+          //print_r($feedkeys); exit;
           // Load up the categories currently associated with the course
           $coursekeys = get_the_terms($course->ID,'keywords');
+          $ckindex = [];
+          foreach($coursekeys as $kc) {
+            array_push($ckindex,$kc->name);
+          }
           // Loop through each of the existing cats so as to remove terms 
           // which don't exist in the terms in the feed
           foreach($coursekeys as $ck) {
-              if(!in_array($ck->name, $feedkeys)) {
+              if(!in_array($ck->name, $ckindex)) {
                   // The name of this course cat isn't in the feed cat
                   // Delete the old category!
                   wp_remove_object_terms( $course->ID, $ck->name, 'keywords' );
@@ -463,14 +508,11 @@ function course_elm_sync () {
           }
           // Now loop through each of the cats in the feed to add any new terms
           foreach($feedkeys as $fc) {
-              if(!in_array($fc->name, $coursekeys)) {
-                  // The name of this feed cat isn't in the course cat
-                  // Add the new category!
-                  wp_set_object_terms( $course->ID, sanitize_text_field($fc->name), 'keywords', false);                
-              }
+            wp_set_object_terms( $course->ID, sanitize_text_field($fc), 'keywords', false);
           }
 
           $coursepartner = get_the_terms($course->ID,'learning_partner');
+          //print_r($coursepartner); exit;
           if($coursepartner[0]->name != $feedcourse->_learning_partner) {
               wp_set_object_terms( $course->ID, sanitize_text_field($feedcourse->_learning_partner), 'learning_partner', false);
           }
@@ -495,8 +537,8 @@ function course_elm_sync () {
   //
   // If the course doesn't exist within the catalog yet, then we create it!
   //
-  foreach($feed as $feedcourse) {
-
+  foreach($feed->items as $feedcourse) {
+print_r($feedcourse); exit;
       if(!in_array($feedcourse->title, $courseindex)) {
 
           // This course isn't in the list of published courses
