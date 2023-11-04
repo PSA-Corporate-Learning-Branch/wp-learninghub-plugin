@@ -334,10 +334,21 @@ function systems_sync() {
 		wp_die( __( 'You do not have sufficient permissions to access this page.' ) );
 	}
     echo '<h1>External Systems Synchronize</h1>';
-    $go = admin_url('edit.php?noheader=true&post_type=course&page=course_elm_sync');
-    echo '<a href="'.$go.'" ';
+    echo '<p>The LearningHUB can synchronize with other systems, including the ';
+    echo '<a href="https://learning.gov.bc.ca/CHIPSPLM/signon.html" target="_blank">PSA Learning System</a> and the ';
+    echo '<a href="https://learningcurator.gww.gov.bc.ca/" target="_blank">Learning Curator</a></p>';
+    $psalslink = admin_url('edit.php?noheader=true&post_type=course&page=course_elm_sync');
+    echo '<div style="margin-bottom: 1em;">';
+    echo '<a href="'.$psalslink.'" ';
     echo 'style="background-color: #222; color: #FFF; display: inline-block; padding: .75em 2em;">';
     echo 'Start synchronization with PSA Learning System';
+    echo '</a>';
+    echo '</div>';
+    echo '<div>';
+    $curatorlink = admin_url('edit.php?noheader=true&post_type=course&page=curator_sync');
+    echo '<a href="'.$curatorlink.'" ';
+    echo 'style="background-color: #222; color: #FFF; display: inline-block; padding: .75em 2em;">';
+    echo 'Start synchronization with Learning Curator';
     echo '</a>';
     echo '</div>';
 
@@ -353,7 +364,6 @@ function course_elm_sync () {
   }
 
   // Get the feed and parse it into an array.
-  // $f = file_get_contents('https://bigaddposse.com/learning-partner-courses.json');
   $f = file_get_contents('https://learn.bcpublicservice.gov.bc.ca/learning-hub/learning-partner-courses.json');
   $feed = json_decode($f);
   
@@ -396,33 +406,7 @@ function course_elm_sync () {
           'terms' => 'psa-learning-system')
       ))
     );
-  //     WP_Post Object Response
-  // (
-  //     [ID] =>
-  //     [post_author] =>
-  //     [post_date] => 
-  //     [post_date_gmt] => 
-  //     [post_content] => 
-  //     [post_title] => 
-  //     [post_excerpt] => 
-  //     [post_status] =>
-  //     [comment_status] =>
-  //     [ping_status] => 
-  //     [post_password] => 
-  //     [post_name] =>
-  //     [to_ping] => 
-  //     [pinged] => 
-  //     [post_modified] => 
-  //     [post_modified_gmt] =>
-  //     [post_content_filtered] => 
-  //     [post_parent] => 
-  //     [guid] => 
-  //     [menu_order] =>
-  //     [post_type] =>
-  //     [post_mime_type] => 
-  //     [comment_count] =>
-  //     [filter] =>
-  // )
+
   //
   // Create the array to array_push the existing course titles into
   $courseindex = [];
