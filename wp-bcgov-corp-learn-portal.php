@@ -538,7 +538,7 @@ function course_elm_sync () {
   // If the course doesn't exist within the catalog yet, then we create it!
   //
   foreach($feed->items as $feedcourse) {
-print_r($feedcourse); exit;
+//print_r($feedcourse); exit;
       if(!in_array($feedcourse->title, $courseindex)) {
 
           // This course isn't in the list of published courses
