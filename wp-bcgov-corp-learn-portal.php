@@ -115,7 +115,7 @@ function my_taxonomies_learning_partner() {
         'hierarchical' => true,
         'show_admin_column' => true,
         'show_in_rest' => true,
-    );
+    );  
     register_taxonomy( 'learning_partner', 'course', $args );
 }
 
@@ -319,6 +319,14 @@ function course_menu() {
 		'course_elm_sync',
 		'course_elm_sync'
 	);
+	add_submenu_page(
+		null,
+		null,
+		null,
+		'edit_posts',
+		'curator_sync',
+		'curator_sync'
+	);
 
 }
 add_action( 'admin_menu', 'course_menu' );
@@ -334,23 +342,23 @@ function systems_sync() {
 		wp_die( __( 'You do not have sufficient permissions to access this page.' ) );
 	}
     echo '<h1>External Systems Synchronize</h1>';
-    echo '<p>The LearningHUB can synchronize with other systems, including the ';
+    echo '<p>The LearningHUB synchronizes with other systems, currently including the ';
     echo '<a href="https://learning.gov.bc.ca/CHIPSPLM/signon.html" target="_blank">PSA Learning System</a> and the ';
-    echo '<a href="https://learningcurator.gww.gov.bc.ca/" target="_blank">Learning Curator</a></p>';
+    echo '<a href="https://learningcurator.gww.gov.bc.ca/" target="_blank">Learning Curator</a>.</p>';
     $psalslink = admin_url('edit.php?noheader=true&post_type=course&page=course_elm_sync');
     echo '<div style="margin-bottom: 1em;">';
     echo '<a href="'.$psalslink.'" ';
-    echo 'style="background-color: #222; color: #FFF; display: inline-block; padding: .75em 2em;">';
-    echo 'Start synchronization with PSA Learning System';
+    echo 'style="background-color: #222; border-radius: 5px; color: #FFF; display: inline-block; padding: .75em 2em; text-decoration: none;">';
+    echo 'Start Systems Sync';
     echo '</a>';
     echo '</div>';
-    echo '<div>';
-    $curatorlink = admin_url('edit.php?noheader=true&post_type=course&page=curator_sync');
-    echo '<a href="'.$curatorlink.'" ';
-    echo 'style="background-color: #222; color: #FFF; display: inline-block; padding: .75em 2em;">';
-    echo 'Start synchronization with Learning Curator';
-    echo '</a>';
-    echo '</div>';
+    // echo '<div>';
+    // $curatorlink = admin_url('edit.php?noheader=true&post_type=course&page=curator_sync');
+    // echo '<a href="'.$curatorlink.'" ';
+    // echo 'style="background-color: #222; color: #FFF; display: inline-block; padding: .75em 2em;">';
+    // echo 'Start synchronization with Learning Curator';
+    // echo '</a>';
+    // echo '</div>';
 
 }
 
@@ -364,6 +372,7 @@ function course_elm_sync () {
   }
 
   // Get the feed and parse it into an array.
+  // $f = file_get_contents('https://bigaddposse.com/learning-partner-courses.json');
   $f = file_get_contents('https://learn.bcpublicservice.gov.bc.ca/learning-hub/learning-partner-courses.json');
   $feed = json_decode($f);
   
@@ -566,7 +575,8 @@ function course_elm_sync () {
       // so do nothing else
   }
 
-  header('Location: /learninghub/wp-admin/edit.php?post_type=course');
+  // header('Location: /learninghub/wp-admin/edit.php?post_type=course');
+  header('Location: edit.php?noheader=true&post_type=course&page=curator_sync');
 }
 
 /**
@@ -580,16 +590,18 @@ function curator_sync () {
   }
 
   // Get the feed and parse it into an array.
-  $f = file_get_contents('https://learningcurator.gww.gov.bc.ca/pathways/feed.json');
+  $f = file_get_contents('https://learningcurator.ca/pathways/jsonfeed');
+  // $f = file_get_contents('https://learningcurator.gww.gov.bc.ca/pathways/jsonfeed');
   $feed = json_decode($f);
   
   // Create a simple index of course names that are in the feed
   // so that we can easily use in_array to compare against while
   // we loop through all the published courses.
   $feedindex = [];
-  foreach($feed->items as $feedcourse) {
-      array_push($feedindex, $feedcourse->title);
+  foreach($feed->pathways as $feedcourse) {
+    array_push($feedindex, htmlentities(trim($feedcourse->name)));
   }
+
   // Now we can loop through each of the exisiting published courses
   // and check each against the feedindex array.
   //
@@ -607,7 +619,7 @@ function curator_sync () {
 
   //
   // Start by getting all the courses that are listed as being in the 
-  // PSA Learning System, whatever the status (we even want existing private 
+  // PSA Learning Curator, whatever the status (we even want existing private 
   // courses so that we can simply update and set back to published instead
   // of creating a whole new one.)
   //
@@ -619,7 +631,7 @@ function curator_sync () {
           array(
           'taxonomy' => 'external_system',
           'field' => 'slug',
-          'terms' => 'psa-learning-system')
+          'terms' => 'psa-learning-curator')
       ))
     );
 
@@ -632,28 +644,29 @@ function curator_sync () {
       // Start by adding all the course titles to the courseindex array so that
       // after this loop runs through, we can loop through the feed again
       // and find the courses that are new and need to be created from scratch.
-      array_push($courseindex, $course->post_title);
+      array_push($courseindex, htmlentities(trim($course->post_title)));
 
       // Does the course title match a title that's in the feed?
-      if(in_array($course->post_title, $feedindex)) {
+      if(in_array(htmlentities(trim($course->post_title)), $feedindex)) {
 
           // Get the details for the feedcourse so we can compare
-          foreach($feed->items as $f) {
-              if($f->title == $course->post_title) {
+          foreach($feed->pathways as $f) {
+              if(trim($f->name) == trim($course->post_title)) {
                 $feedcourse = $f;
               }
           }
-
+          
           // Compare more throughly for any updates.
           // If everything is the same then we're not actually touching the 
           // database at all in this process.
-          if($feedcourse->summary != $course->post_content) {
+          if($feedcourse->objective != $course->post_content) {
               // update post content
-              $course->post_content = $feedcourse->summary;
-              $course->post_excerpt = $feedcourse->summary;
+              $course->post_content = $feedcourse->objective;
+              $course->post_excerpt = $feedcourse->objective;
           }
-          if($feedcourse->url != $course->course_link) {
-              update_post_meta( $course->ID, 'course_link', $feedcourse->url );
+          $fcurl = 'https://learningcurator.gww.gov.bc.ca/p/' . $feedcourse->slug;
+          if($fcurl != $course->course_link) {
+              update_post_meta( $course->ID, 'course_link', $fcurl );
           }
           // Make sure it's published just in case we're matching against a 
           // course that is currently private.
@@ -664,68 +677,17 @@ function curator_sync () {
           // separate functions.
           wp_update_post($course);
 
-          // Get the categories for this course from the feed
-          $feedcats = explode(',', $feedcourse->tags);
-          // Load up the categories currently associated with the course
-          $coursecats = get_the_terms($course->ID,'course_category');
-          if(!empty($coursecats)) {
-            // Update the course with the feed categories.
-            wp_set_object_terms( $course->ID, $feedcats, 'course_category', false);
-            // But now we also need to account for categories that have been 
-            // removed, so we quickly create an index of the existing ones to 
-            // match against.
-            $ccindex = [];
-            foreach($coursecats as $cc) {
-              array_push($ccindex,$cc->name);
-            }
-            // Loop through each of the existing cats so as to remove terms 
-            // which don't exist in the terms in the feed.
-            foreach($coursecats as $cc) {
-                if(!in_array($cc->name, $feedcats)) {
-                    // The name of this course cat isn't in the feed cats
-                    // Delete the old category!
-                    wp_remove_object_terms( $course->ID, $cc->name, 'course_category' );
-                }
-            }
-          }
 
-          // Repeat the process above but for keywords instead of categories.
-          // Get the keywords for this course from the feed.
-          $feedkeys = explode(',', $feedcourse->_keywords);
-          // Load up the categories currently associated with the course.
-          $coursekeys = get_the_terms($course->ID,'keywords');
-          if(!empty($coursekeys)) {
-            // Update the course with the feed keywords.
-            wp_set_object_terms( $course->ID, $feedkeys, 'keywords', false);
-            // But now we also need to account for keywords that have been 
-            // removed, so we quickly create an index of the existing ones to 
-            // match against.
-            $ckindex = [];
-            foreach($coursekeys as $kc) {
-              array_push($ckindex,$kc->name);
-            }
-            // Loop through each of the existing keywords so as to remove terms 
-            // which don't exist in the terms in the feed
-            foreach($coursekeys as $ck) {
-                if(!in_array($ck->name, $ckindex)) {
-                    // The name of this course key isn't in the feed keys
-                    // Delete the old keyword!
-                    wp_remove_object_terms( $course->ID, $ck->name, 'keywords' );
+          #TODO update topics and maybe keywords too?
 
-                }
-            }
-          }
+
           // Coming into the home stretch updating the partner and delivery method.
           $coursepartner = get_the_terms($course->ID,'learning_partner');
           // There's only ever one partner #TODO support multiple partners?
-          if($coursepartner[0]->name != $feedcourse->_learning_partner) {
-              wp_set_object_terms( $course->ID, sanitize_text_field($feedcourse->_learning_partner), 'learning_partner', false);
+          if($coursepartner[0]->name != 'Learning Centre') {
+              wp_set_object_terms( $course->ID, 'Learning Centre', 'learning_partner', false);
           }
-          // There's only ever one delivery method
-          $coursemethod = get_the_terms($course->ID,'delivery_method');
-          if($coursemethod[0]->name != $feedcourse->delivery_method) {
-              wp_set_object_terms( $course->ID, sanitize_text_field($feedcourse->delivery_method), 'delivery_method', false);
-          }
+
 
       } else { // Does the course title match a title that's in the feed?
 
@@ -742,40 +704,33 @@ function curator_sync () {
   //
   // If the course doesn't exist within the catalog yet, then we create it!
   //
-  foreach($feed->items as $feedcourse) {
+  foreach($feed->pathways as $feedcourse) {
 
-      if(!in_array($feedcourse->title, $courseindex) && !empty($feedcourse->title)) {
+      if(!in_array($feedcourse->name, $courseindex) && !empty($feedcourse->name)) {
 
           // This course isn't in the list of published courses
           // so it is new, so we need to create this course from scratch.
           // Set up the new course with basic settings in place
+          $fcurl = 'https://learningcurator.gww.gov.bc.ca/p/' . $feedcourse->slug;
           $new_course = array(
-              'post_title' => sanitize_text_field($feedcourse->title),
+              'post_title' => trim($feedcourse->name),
               'post_type' => 'course',
               'post_status' => 'publish', 
-              'post_content' => sanitize_text_field($feedcourse->summary),
-              'post_excerpt' => substr(sanitize_text_field($feedcourse->summary), 0, 100),
+              'post_content' => sanitize_text_field($feedcourse->objective),
+              'post_excerpt' => substr(sanitize_text_field($feedcourse->objective), 0, 100),
               'meta_input'   => array(
-                  'course_link' => esc_url_raw($feedcourse->url),
-                  'elm_course_code' => $feedcourse->id
+                  'course_link' => esc_url_raw($fcurl)
               )
           );
           // Actually create the new post so that we can move on 
           // to updating it with taxonomy etc
           $post_id = wp_insert_post( $new_course );
 
-          wp_set_object_terms( $post_id, sanitize_text_field($feedcourse->delivery_method), 'delivery_method', false);
-          wp_set_object_terms( $post_id, sanitize_text_field($feedcourse->_learning_partner), 'learning_partner', false);
-          wp_set_object_terms( $post_id, 'PSA Learning System', 'external_system', false);
+          wp_set_object_terms( $post_id, 'Curated Pathway', 'delivery_method', false);
+          // wp_set_object_terms( $post_id, sanitize_text_field($feedcourse->_learning_partner), 'learning_partner', false);
+          wp_set_object_terms( $post_id, 'Learning Centre', 'learning_partner', false);
+          wp_set_object_terms( $post_id, 'PSA Learning Curator', 'external_system', false);
 
-          if(!empty($feedcourse->_keywords)) {
-            $keywords = explode(',', $feedcourse->_keywords);
-            wp_set_object_terms( $post_id, $keywords, 'keywords', true);
-          }
-          if(!empty($feedcourse->tags)) {
-            $cats = explode(',', $feedcourse->tags);
-            wp_set_object_terms( $post_id, $cats, 'course_category', true);
-          }
 
       } 
       // otherwise, we've already dealt with things in the previous loop 
