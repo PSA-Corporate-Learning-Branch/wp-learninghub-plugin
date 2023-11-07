@@ -87,6 +87,12 @@ function my_taxonomies_system() {
         'hierarchical' => false,
         'show_admin_column' => true,
         'show_in_rest' => true,
+        'capabilities' => array(
+          'manage_terms' => 'edit_posts',
+          'edit_terms' => 'manage_options',
+          'delete_terms' => 'manage_options',
+          'assign_terms' => 'edit_posts'
+        ),
     );
     register_taxonomy( 'external_system', 'course', $args );
 }
@@ -115,6 +121,12 @@ function my_taxonomies_learning_partner() {
         'hierarchical' => true,
         'show_admin_column' => true,
         'show_in_rest' => true,
+        'capabilities' => array(
+          'manage_terms' => 'edit_posts',
+          'edit_terms' => 'manage_options',
+          'delete_terms' => 'manage_options',
+          'assign_terms' => 'edit_posts'
+        ),
     );  
     register_taxonomy( 'learning_partner', 'course', $args );
 }
@@ -165,6 +177,12 @@ function my_taxonomies_course_delivery_method() {
         'labels' => $labels,
         'hierarchical' => true,
         'show_in_rest' => true,
+        'capabilities' => array(
+          'manage_terms' => 'edit_posts',
+          'edit_terms' => 'manage_options',
+          'delete_terms' => 'manage_options',
+          'assign_terms' => 'edit_posts'
+        ),
     );
     register_taxonomy( 'delivery_method', 'course', $args );
 }
@@ -216,6 +234,12 @@ function my_taxonomies_course_topics() {
         'labels' => $labels,
         'hierarchical' => false,
         'show_in_rest' => true,
+        'capabilities' => array(
+          'manage_terms' => 'edit_posts',
+          'edit_terms' => 'manage_options',
+          'delete_terms' => 'manage_options',
+          'assign_terms' => 'edit_posts'
+        ),
     );
     register_taxonomy( 'topics', 'course', $args );
 }
@@ -240,6 +264,12 @@ function my_taxonomies_course_groups() {
         'labels' => $labels,
         'hierarchical' => false,
         'show_in_rest' => true,
+        'capabilities' => array(
+          'manage_terms' => 'edit_posts',
+          'edit_terms' => 'manage_options',
+          'delete_terms' => 'manage_options',
+          'assign_terms' => 'edit_posts'
+        ),
     );
     register_taxonomy( 'groups', 'course', $args );
 }
