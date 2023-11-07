@@ -122,27 +122,27 @@ function my_taxonomies_learning_partner() {
 /**
  * Course Categories
  */
-function my_taxonomies_course_category() {
-    $labels = array(
-        'name'              => _x( 'Course Categories', 'taxonomy general name' ),
-        'singular_name'     => _x( 'Course Category', 'taxonomy singular name' ),
-        'search_items'      => __( 'Search Course Categories' ),
-        'all_items'         => __( 'All Course Categories' ),
-        'parent_item'       => __( 'Parent Course Category' ),
-        'parent_item_colon' => __( 'Parent Course Category:' ),
-        'edit_item'         => __( 'Edit Course Category' ), 
-        'update_item'       => __( 'Update Course Category' ),
-        'add_new_item'      => __( 'Add New Course Category' ),
-        'new_item_name'     => __( 'New Course Category' ),
-        'menu_name'         => __( 'Course Categories' ),
-    );
-    $args = array(
-        'labels' => $labels,
-        'hierarchical' => true,
-        'show_in_rest' => true,
-    );
-    register_taxonomy( 'course_category', 'course', $args );
-}
+// function my_taxonomies_course_category() {
+//     $labels = array(
+//         'name'              => _x( 'Course Categories', 'taxonomy general name' ),
+//         'singular_name'     => _x( 'Course Category', 'taxonomy singular name' ),
+//         'search_items'      => __( 'Search Course Categories' ),
+//         'all_items'         => __( 'All Course Categories' ),
+//         'parent_item'       => __( 'Parent Course Category' ),
+//         'parent_item_colon' => __( 'Parent Course Category:' ),
+//         'edit_item'         => __( 'Edit Course Category' ), 
+//         'update_item'       => __( 'Update Course Category' ),
+//         'add_new_item'      => __( 'Add New Course Category' ),
+//         'new_item_name'     => __( 'New Course Category' ),
+//         'menu_name'         => __( 'Course Categories' ),
+//     );
+//     $args = array(
+//         'labels' => $labels,
+//         'hierarchical' => true,
+//         'show_in_rest' => true,
+//     );
+//     register_taxonomy( 'course_category', 'course', $args );
+// }
 
 /**
  * Delivery Methods
@@ -196,10 +196,61 @@ function my_taxonomies_course_keywords() {
 }
 
 /** 
+ * Course topics aligning with Corporate Learning Framework
+ */
+function my_taxonomies_course_topics() {
+    $labels = array(
+        'name'              => _x( 'Topics', 'taxonomy general name' ),
+        'singular_name'     => _x( 'Topic', 'taxonomy singular name' ),
+        'search_items'      => __( 'Search Topics' ),
+        'all_items'         => __( 'All Topics' ),
+        'parent_item'       => __( 'Parent Topic' ),
+        'parent_item_colon' => __( 'Parent Topic' ),
+        'edit_item'         => __( 'Edit Topic' ), 
+        'update_item'       => __( 'Update Topic' ),
+        'add_new_item'      => __( 'Add New Topic' ),
+        'new_item_name'     => __( 'New Topic' ),
+        'menu_name'         => __( 'Topics' ),
+    );
+    $args = array(
+        'labels' => $labels,
+        'hierarchical' => false,
+        'show_in_rest' => true,
+    );
+    register_taxonomy( 'topics', 'course', $args );
+}
+/** 
+ * Course groups aligning with Corporate Learning Framework
+ */
+function my_taxonomies_course_groups() {
+    $labels = array(
+        'name'              => _x( 'Groups', 'taxonomy general name' ),
+        'singular_name'     => _x( 'Group', 'taxonomy singular name' ),
+        'search_items'      => __( 'Search Groups' ),
+        'all_items'         => __( 'All Groups' ),
+        'parent_item'       => __( 'Parent Group' ),
+        'parent_item_colon' => __( 'Parent Group' ),
+        'edit_item'         => __( 'Edit Group' ), 
+        'update_item'       => __( 'Update Group' ),
+        'add_new_item'      => __( 'Add New Group' ),
+        'new_item_name'     => __( 'New Group' ),
+        'menu_name'         => __( 'Groups' ),
+    );
+    $args = array(
+        'labels' => $labels,
+        'hierarchical' => false,
+        'show_in_rest' => true,
+    );
+    register_taxonomy( 'groups', 'course', $args );
+}
+
+/** 
  * Now let's initiate all of those awesome taxonomies!
  */
 
-add_action( 'init', 'my_taxonomies_course_category', 0 );
+add_action( 'init', 'my_taxonomies_course_groups', 0 );
+add_action( 'init', 'my_taxonomies_course_topics', 0 );
+// add_action( 'init', 'my_taxonomies_course_category', 0 );
 add_action( 'init', 'my_taxonomies_course_delivery_method', 0 );
 add_action( 'init', 'my_taxonomies_course_keywords', 0 );
 add_action( 'init', 'my_taxonomies_learning_partner', 0 );
@@ -280,6 +331,9 @@ function course_tax_template( $tax_template ) {
   }
   if ( is_tax ( 'learning_partner' ) ) {
     $tax_template = dirname( __FILE__ ) . '/taxonomy-partner.php';
+  }
+  if ( is_tax ( 'topics' ) ) {
+    $tax_template = dirname( __FILE__ ) . '/taxonomy-topics.php';
   }
   if ( is_tax ( 'delivery_method' ) ) {
     $tax_template = dirname( __FILE__ ) . '/taxonomy-delivery-method.php';
@@ -590,8 +644,8 @@ function curator_sync () {
   }
 
   // Get the feed and parse it into an array.
-  // $f = file_get_contents('https://learningcurator.ca/pathways/jsonfeed');
-  $f = file_get_contents('https://learningcurator.gww.gov.bc.ca/pathways/jsonfeed');
+  $f = file_get_contents('https://learningcurator.ca/pathways/jsonfeed');
+  // $f = file_get_contents('https://learningcurator.gww.gov.bc.ca/pathways/jsonfeed');
   $feed = json_decode($f);
   
   // Create a simple index of course names that are in the feed
@@ -679,6 +733,10 @@ function curator_sync () {
 
 
           #TODO update topics and maybe keywords too?
+          $coursetop = get_the_terms($course->ID,'topics');
+          if($coursetop[0]->name != $feedcourse->topic->name) {
+            wp_set_object_terms( $course->ID, sanitize_text_field($feedcourse->topic->name), 'topics', false);
+          }
 
 
           // Coming into the home stretch updating the partner and delivery method.
@@ -728,6 +786,7 @@ function curator_sync () {
 
           wp_set_object_terms( $post_id, 'Curated Pathway', 'delivery_method', false);
           // wp_set_object_terms( $post_id, sanitize_text_field($feedcourse->_learning_partner), 'learning_partner', false);
+          wp_set_object_terms( $post_id, sanitize_text_field($feedcourse->topic->name), 'topics', false);
           wp_set_object_terms( $post_id, 'Learning Centre', 'learning_partner', false);
           wp_set_object_terms( $post_id, 'PSA Learning Curator', 'external_system', false);
 
