@@ -232,7 +232,7 @@ function my_taxonomies_course_topics() {
     );
     $args = array(
         'labels' => $labels,
-        'hierarchical' => false,
+        'hierarchical' => true,
         'show_in_rest' => true,
         'capabilities' => array(
           'manage_terms' => 'edit_posts',
@@ -262,7 +262,7 @@ function my_taxonomies_course_groups() {
     );
     $args = array(
         'labels' => $labels,
-        'hierarchical' => false,
+        'hierarchical' => true,
         'show_in_rest' => true,
         'capabilities' => array(
           'manage_terms' => 'edit_posts',
@@ -664,8 +664,13 @@ function course_elm_sync () {
 }
 
 /**
- * Synchronize with the public feed for the Learning Curator
+ * Synchronize with the public feed for the Learning Curator.
  * https://learningcurator.gww.gov.bc.ca/
+ * 
+ * This is functionally almost identical to the PSALS sync above,
+ * but some field-mapping is different and some taxes aren't needed.
+ * If we have more than one more system that we want to sync with we 
+ * should look to abstracting this into a single method to be DRY.
  */
 function curator_sync () {
 
@@ -674,8 +679,8 @@ function curator_sync () {
   }
 
   // Get the feed and parse it into an array.
-  $f = file_get_contents('https://learningcurator.ca/pathways/jsonfeed');
-  // $f = file_get_contents('https://learningcurator.gww.gov.bc.ca/pathways/jsonfeed');
+  // $f = file_get_contents('https://learningcurator.ca/pathways/jsonfeed');
+  $f = file_get_contents('https://learningcurator.gww.gov.bc.ca/pathways/jsonfeed');
   $feed = json_decode($f);
   
   // Create a simple index of course names that are in the feed
