@@ -590,8 +590,8 @@ function curator_sync () {
   }
 
   // Get the feed and parse it into an array.
-  $f = file_get_contents('https://learningcurator.ca/pathways/jsonfeed');
-  // $f = file_get_contents('https://learningcurator.gww.gov.bc.ca/pathways/jsonfeed');
+  // $f = file_get_contents('https://learningcurator.ca/pathways/jsonfeed');
+  $f = file_get_contents('https://learningcurator.gww.gov.bc.ca/pathways/jsonfeed');
   $feed = json_decode($f);
   
   // Create a simple index of course names that are in the feed
