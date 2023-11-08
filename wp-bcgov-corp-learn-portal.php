@@ -411,6 +411,14 @@ function course_menu() {
 		'curator_sync',
 		'curator_sync'
 	);
+	add_submenu_page(
+		null,
+		null,
+		null,
+		'edit_posts',
+		'expired_courses',
+		'expired_courses'
+	);
 
 }
 add_action( 'admin_menu', 'course_menu' );
@@ -830,9 +838,55 @@ function curator_sync () {
       // otherwise, we've already dealt with things in the previous loop 
       // so do nothing else
   }
-
-  header('Location: /learninghub/wp-admin/edit.php?post_type=course');
+  
+  // new Log_Warning( 'Successfully syncronized with the LearningHUB and Learning Curator!' );
+  // do_action( 'admin_notices' );
+  // set_transient( 'foo', 'bar', 300 );
+  // header('Location: /learninghub/wp-admin/edit.php?post_type=course');
+  header('Location: edit.php?noheader=true&post_type=course&page=expired_courses');
 }
+
+
+/**
+ * Look through published courses not in the PSALS and check the expiry date
+ * and make private if it's past today.
+ * 
+ * 
+ */
+function expired_courses () {
+
+  if ( !current_user_can( 'edit_posts' ) )  {
+    wp_die( __( 'You do not have sufficient permissions to access this page.' ) );
+  }
+  // Start by getting all the published courses that are NOT listed as being in the 
+  // PSA Learning Curator, 
+  //
+  $courses = get_posts(array(
+      'post_type' => 'course',
+      'numberposts' => -1,
+      'post_status'    => 'published',
+      'tax_query' => array(
+          array(
+          'taxonomy' => 'external_system',
+          'field' => 'slug',
+          'terms' => ['psa-learning-system','psa-learning-curator'],
+          'operator' => 'NOT IN'
+          )
+      ))
+    );
+    $today = date('Y-m-d');
+    foreach ($courses as $course) {
+      if( in_array( 'course_expire', get_post_custom_keys( $course->ID ) ) ) {
+        if($today > $course->course_expire) {
+          $course->post_status = 'private';
+          wp_update_post( $course );
+        }
+
+      }
+    } 
+    header('Location: /learninghub/wp-admin/edit.php?post_type=course');
+}
+
 
 /* Fire our meta box setup function on the post editor screen. */
 add_action( 'load-post.php', 'courses_meta_boxes_setup' );
@@ -845,6 +899,7 @@ function courses_meta_boxes_setup() {
     add_action( 'add_meta_boxes', 'courses_add_post_meta_boxes' );
     /* Save post meta on the 'save_post' hook. */
     add_action( 'save_post', 'course_save_course_link_meta', 10, 2 );
+    add_action( 'save_post', 'course_save_course_expire_meta', 10, 2 );
 }
 
 /* Create one or more meta boxes to be displayed on the post editor screen. */
@@ -858,7 +913,16 @@ function courses_add_post_meta_boxes() {
         'side',         // Context
         'default'         // Priority
     );
+    add_meta_box(
+        'course-expire',      // Unique ID
+        esc_html__( 'Course Expiration', 'course-expire' ),    // Title
+        'course_expire_meta_box',   // Callback function
+        'course',         // Admin page (or post type)
+        'side',         // Context
+        'high'         // Priority
+    );
 }
+
 /* Display the post meta box. */
 function course_link_meta_box( $post ) { ?>
 
@@ -872,6 +936,22 @@ function course_link_meta_box( $post ) { ?>
                 name="course-link" 
                 id="course-link" 
                 value="<?php echo esc_attr( get_post_meta( $post->ID, 'course_link', true ) ); ?>" 
+                size="30" />
+    </div>
+<?php }
+/* Display the post meta box. */
+function course_expire_meta_box( $post ) { ?>
+
+    <?php wp_nonce_field( basename( __FILE__ ), 'course_expire_nonce' ); ?>
+    <div>
+        <label for="course-expire">
+        <?php _e( "The date that this course should be removed from public view.", 'course-expire' ); ?></label>
+        <br />
+        <input class="widefat" 
+                type="date" 
+                name="course-expire" 
+                id="course-expire" 
+                value="<?php echo esc_attr( get_post_meta( $post->ID, 'course_expire', true ) ); ?>" 
                 size="30" />
     </div>
 <?php }
@@ -909,6 +989,40 @@ function course_save_course_link_meta ( $post_id, $post ) {
     } elseif ( !$new_meta_value && $meta_value ) {
         delete_post_meta( $post_id, $meta_key, $meta_value );
     }
+}
+/* Save a meta box’s post metadata. */
+function course_save_course_expire_meta ( $post_id, $post ) {
+
+  /* Verify the nonce before proceeding. */
+  if ( !isset( $_POST['course_expire_nonce'] ) || !wp_verify_nonce( $_POST['course_expire_nonce'], basename( __FILE__ ) ) ) {
+      return $post_id;
+  }
+  /* Get the post type object. */
+  $post_type = get_post_type_object( $post->post_type );
+
+  /* Check if the current user has permission to edit the post. */
+  if ( !current_user_can( $post_type->cap->edit_post, $post_id ) )
+  return $post_id;
+
+  /* Get the posted data */
+  $new_meta_value = ( isset( $_POST['course-expire'] ) ? $_POST['course-expire'] : ’ );
+
+  /* Get the meta key. */
+  $meta_key = 'course_expire';
+
+  /* Get the meta value of the custom field key. */
+  $meta_value = get_post_meta( $post_id, $meta_key, true );
+
+  /* If a new meta value was added and there was no previous value, add it. */
+  if ( $new_meta_value && !$meta_value ) {
+      add_post_meta( $post_id, $meta_key, $new_meta_value, true );
+  /* If the new meta value does not match the old value, update it. */
+  } elseif ( $new_meta_value && $new_meta_value != $meta_value ) {
+      update_post_meta( $post_id, $meta_key, $new_meta_value );
+  /* If there is no new meta value but an old value exists, delete it. */
+  } elseif ( !$new_meta_value && $meta_value ) {
+      delete_post_meta( $post_id, $meta_key, $meta_value );
+  }
 }
 
 
