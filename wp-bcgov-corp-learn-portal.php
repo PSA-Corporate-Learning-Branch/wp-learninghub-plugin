@@ -1,11 +1,11 @@
 <?php
 /*
 Plugin Name: BC Gov Corporate Learning Hub
-Plugin URI: https://github.com/allanhaggett/wp-bcgov-learning-hub
+Plugin URI: https://github.com/allanhaggett/wp-bcgov-learning-hub/
 Description: A gateway to everything that BC Gov has to offer for learning opportunities.
 Author: Allan Haggett <allan.haggett@gov.bc.ca>
 Version: 1
-Author URI: https://learningcenter.gww.gov.bc.ca/hub
+Author URI: https://learningcenter.gww.gov.bc.ca/learninghub/
 */
 
 
@@ -877,6 +877,7 @@ function expired_courses () {
       if( in_array( 'course_expire', get_post_custom_keys( $course->ID ) ) ) {
 
         if($today > $course->course_expire) {
+          
           $course->post_status = 'private';
           wp_update_post( $course );
         }
