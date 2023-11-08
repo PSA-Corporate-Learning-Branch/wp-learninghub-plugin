@@ -839,9 +839,6 @@ function curator_sync () {
       // so do nothing else
   }
   
-  // new Log_Warning( 'Successfully syncronized with the LearningHUB and Learning Curator!' );
-  // do_action( 'admin_notices' );
-  // set_transient( 'foo', 'bar', 300 );
   // header('Location: /learninghub/wp-admin/edit.php?post_type=course');
   header('Location: edit.php?noheader=true&post_type=course&page=expired_courses');
 }
@@ -851,7 +848,6 @@ function curator_sync () {
  * Look through published courses not in the PSALS and check the expiry date
  * and make private if it's past today.
  * 
- * 
  */
 function expired_courses () {
 
@@ -859,7 +855,7 @@ function expired_courses () {
     wp_die( __( 'You do not have sufficient permissions to access this page.' ) );
   }
   // Start by getting all the published courses that are NOT listed as being in the 
-  // PSA Learning Curator, 
+  // PSA Learning Curator, or the PSA Learning System.
   //
   $courses = get_posts(array(
       'post_type' => 'course',
@@ -876,14 +872,16 @@ function expired_courses () {
     );
     $today = date('Y-m-d');
     foreach ($courses as $course) {
+
+      // Does the course have a expiration date set?
       if( in_array( 'course_expire', get_post_custom_keys( $course->ID ) ) ) {
+
         if($today > $course->course_expire) {
           $course->post_status = 'private';
           wp_update_post( $course );
         }
-
       }
-    } 
+    }
     header('Location: /learninghub/wp-admin/edit.php?post_type=course');
 }
 
@@ -945,7 +943,9 @@ function course_expire_meta_box( $post ) { ?>
     <?php wp_nonce_field( basename( __FILE__ ), 'course_expire_nonce' ); ?>
     <div>
         <label for="course-expire">
-        <?php _e( "The date that this course should be removed from public view.", 'course-expire' ); ?></label>
+        <?php _e( "The date after which this course should be removed from public view. ") ?>
+        <?php _e("Only courses not being sync'ed pay attention to this. <br>(e.g., Curator and PSALS)", 'course-expire' ); ?>
+        </label>
         <br />
         <input class="widefat" 
                 type="date" 
