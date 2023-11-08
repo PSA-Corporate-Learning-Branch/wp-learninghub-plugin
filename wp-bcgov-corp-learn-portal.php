@@ -433,10 +433,12 @@ function systems_sync() {
 	if ( !current_user_can( 'edit_posts' ) )  {
 		wp_die( __( 'You do not have sufficient permissions to access this page.' ) );
 	}
-    echo '<h1>External Systems Synchronize</h1>';
+    echo '<h1>External Systems Synchronization</h1>';
     echo '<p>The LearningHUB synchronizes with other systems, currently including the ';
     echo '<a href="https://learning.gov.bc.ca/CHIPSPLM/signon.html" target="_blank">PSA Learning System</a> and the ';
     echo '<a href="https://learningcurator.gww.gov.bc.ca/" target="_blank">Learning Curator</a>.</p>';
+    echo '<p>Additionally, running this sync process will examine courses that aren\'t in a sync system which have an ';
+    echo 'expiration date set. If the date is older than today, the course is marked private.</p>';
     $psalslink = admin_url('edit.php?noheader=true&post_type=course&page=course_elm_sync');
     echo '<div style="margin-bottom: 1em;">';
     echo '<a href="'.$psalslink.'" ';
@@ -444,6 +446,7 @@ function systems_sync() {
     echo 'Start Systems Sync';
     echo '</a>';
     echo '</div>';
+
     // echo '<div>';
     // $curatorlink = admin_url('edit.php?noheader=true&post_type=course&page=curator_sync');
     // echo '<a href="'.$curatorlink.'" ';
@@ -661,6 +664,12 @@ function course_elm_sync () {
             $cats = explode(',', $feedcourse->tags);
             wp_set_object_terms( $post_id, $cats, 'course_category', true);
           }
+
+          // $to = 'allan.haggett@gov.bc.ca';
+          // $subject = 'LearningHUB new course:' . $feedcourse->title;
+          // $body = 'A new course was added from PSA Learning System to the LearningHUB "'  . $feedcourse->title . '"';
+          // $headers = array('Content-Type: text/html; charset=UTF-8');
+          // wp_mail( $to, $subject, $body, $headers );
 
       } 
       // otherwise, we've already dealt with things in the previous loop 
