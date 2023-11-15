@@ -467,8 +467,8 @@ function course_elm_sync () {
   }
 
   // Get the feed and parse it into an array.
-  // $f = file_get_contents('https://bigaddposse.com/learning-partner-courses.json');
-  $f = file_get_contents('https://learn.bcpublicservice.gov.bc.ca/learning-hub/learning-partner-courses.json');
+  $f = file_get_contents('https://bigaddposse.com/learning-partner-courses.json');
+  // $f = file_get_contents('https://learn.bcpublicservice.gov.bc.ca/learning-hub/learning-partner-courses.json');
   $feed = json_decode($f);
   
   // Create a simple index of course names that are in the feed
@@ -476,8 +476,11 @@ function course_elm_sync () {
   // we loop through all the published courses.
   $feedindex = [];
   foreach($feed->items as $feedcourse) {
-      array_push($feedindex, $feedcourse->title);
+    if(!empty($feedcourse->_course_id)) {
+      array_push($feedindex, $feedcourse->_course_id);
+    }
   }
+  
   // Now we can loop through each of the exisiting published courses
   // and check each against the feedindex array.
   //
@@ -520,17 +523,23 @@ function course_elm_sync () {
       // Start by adding all the course titles to the courseindex array so that
       // after this loop runs through, we can loop through the feed again
       // and find the courses that are new and need to be created from scratch.
-      array_push($courseindex, $course->post_title);
+      array_push($courseindex, $course->elm_course_id);
 
       // Does the course title match a title that's in the feed?
-      if(in_array($course->post_title, $feedindex)) {
+      if(in_array($course->elm_course_id, $feedindex)) {
 
           // Get the details for the feedcourse so we can compare
           foreach($feed->items as $f) {
+            if(!empty($f->title)) {
               if($f->title == $course->post_title) {
                 $feedcourse = $f;
               }
+            }
           }
+        
+          // Set a flag to determine if the course has been updated
+          // so that we can not touch the database if we don't need to.
+          $courseupdated = 0;
 
           // Compare more throughly for any updates.
           // If everything is the same then we're not actually touching the 
@@ -539,41 +548,82 @@ function course_elm_sync () {
               // update post content
               $course->post_content = $feedcourse->summary;
               $course->post_excerpt = $feedcourse->summary;
+              // Something changed, so we need to update the database.
+              $courseupdated = 1;
           }
-          if($feedcourse->url != $course->course_link) {
-              update_post_meta( $course->ID, 'course_link', $feedcourse->url );
-          }
+
           // Make sure it's published just in case we're matching against a 
           // course that is currently private.
-          $course->post_status = 'publish';
+          if($course->post_status == 'private') {
+            $course->post_status = 'publish';
+            // Something changed, so we need to update the database.
+            $courseupdated = 1;
+          }
 
-          // That's it for core details, so let's update the post.
-          // After this we're updating the taxonomies which happens with 
+          // That's it for core details, so let's update the post if we need to.
+          // After this we're updating the taxonomies & meta which happens with 
           // separate functions.
-          wp_update_post($course);
+          if($courseupdated) {
+            wp_update_post($course);
+          }
+
+          // The link directly to the course page on the external system.
+          if($feedcourse->url != $course->course_link) {
+            update_post_meta( $course->ID, 'course_link', $feedcourse->url );
+          }
+          // ELM course code e.g., ITEM-2089
+          if($feedcourse->id != $course->elm_course_code) {
+            update_post_meta( $course->ID, 'elm_course_code', $feedcourse->_course_code );
+          }
 
           // Get the categories for this course from the feed
-          $feedcats = explode(',', $feedcourse->tags);
+          $feedtops = explode(', ', $feedcourse->tags);
           // Load up the categories currently associated with the course
-          $coursecats = get_the_terms($course->ID,'course_category');
-          if(!empty($coursecats)) {
-            // Update the course with the feed categories.
-            wp_set_object_terms( $course->ID, $feedcats, 'course_category', false);
-            // But now we also need to account for categories that have been 
-            // removed, so we quickly create an index of the existing ones to 
+          $coursetops = get_the_terms($course->ID,'topics');
+
+          if(!empty($feedtops)) { 
+            // Update the course with the feed topics.
+            // Testing if there are new terms and only add new ones. 
+            // Passing an array of new terms rather than having a new 
+            // wp_set_object_terms for each one. So, let's run through
+            // the feed terms, compare with the existing terms and create a new 
+            // array of only new terms, then run wp_set_object_terms with that.
+            //
+            // Create an index of the existing ones to 
             // match against.
-            $ccindex = [];
-            foreach($coursecats as $cc) {
-              array_push($ccindex,$cc->name);
+            $ctindex = [];
+            if(!empty($coursetops)) {
+              foreach($coursetops as $ct) {
+                array_push($ctindex,trim($ct->name));
+              }
             }
-            // Loop through each of the existing cats so as to remove terms 
-            // which don't exist in the terms in the feed.
-            foreach($coursecats as $cc) {
-                if(!in_array($cc->name, $feedcats)) {
+            // echo '<pre>'; print_r($ctindex); exit;
+            // Store any new cats in here
+            $newtops = [];
+            // Run through each cat in the feed and check it
+            foreach($feedtops as $ft) {
+              // Does this term NOT exist in the existing cats?
+              if(!in_array($ft,$ctindex)) {
+                // Add it to the array
+                array_push($newtops,$ft);
+              }
+            }
+            
+            // If the newcats array isn't empty, run wp_set_object_terms against it
+            if(!empty($newtops)) {
+              wp_set_object_terms( $course->ID, $feedtops, 'topics', false);
+            }
+
+            // Now let's loop through each of the existing cats so as to remove 
+            // terms which don't exist in the terms in the feed.
+            if(!empty($coursetops)) { // this is a bit of repeat but I kinda like the separation
+              foreach($coursetops as $ct) {
+                if(!in_array($ct->name, $feedtops)) {
                     // The name of this course cat isn't in the feed cats
                     // Delete the old category!
-                    wp_remove_object_terms( $course->ID, $cc->name, 'course_category' );
+                    wp_remove_object_terms( $course->ID, $ct->name, 'topics' );
                 }
+              }
             }
           }
 
@@ -582,9 +632,40 @@ function course_elm_sync () {
           $feedkeys = explode(',', $feedcourse->_keywords);
           // Load up the categories currently associated with the course.
           $coursekeys = get_the_terms($course->ID,'keywords');
-          if(!empty($coursekeys)) {
-            // Update the course with the feed keywords.
-            wp_set_object_terms( $course->ID, $feedkeys, 'keywords', false);
+          if(!empty($feedkeys)) {
+            // Update the course with the feed topics.
+            // Testing if there are new terms and only add new ones. 
+            // Passing an array of new terms rather than having a new 
+            // wp_set_object_terms for each one. So, let's run through
+            // the feed terms, compare with the existing terms and create a new 
+            // array of only new terms, then run wp_set_object_terms with that.
+            //
+            // Create an index of the existing ones to 
+            // match against.
+            $ckindex = [];
+            if(!empty($coursekeys)) {
+              foreach($coursekeys as $ck) {
+                array_push($ckindex,trim($ck->name));
+              }
+            }
+            // echo '<pre>'; print_r($ctindex); exit;
+            // Store any new cats in here
+            $newkeys = [];
+            // Run through each cat in the feed and check it
+            foreach($feedkeys as $fk) {
+              // Does this term NOT exist in the existing cats?
+              if(!in_array($fk,$ckindex)) {
+                // Add it to the array
+                array_push($newkeys,$fk);
+              }
+            }
+            
+            // If the newcats array isn't empty, run wp_set_object_terms against
+            // the new terms all in one go
+            if(!empty($newkeys)) {
+              wp_set_object_terms( $course->ID, $feedkeys, 'keywords', false);
+            }
+
             // But now we also need to account for keywords that have been 
             // removed, so we quickly create an index of the existing ones to 
             // match against.
@@ -595,14 +676,14 @@ function course_elm_sync () {
             // Loop through each of the existing keywords so as to remove terms 
             // which don't exist in the terms in the feed
             foreach($coursekeys as $ck) {
-                if(!in_array($ck->name, $ckindex)) {
+                if(!in_array($ck->name, $feedkeys)) {
                     // The name of this course key isn't in the feed keys
                     // Delete the old keyword!
                     wp_remove_object_terms( $course->ID, $ck->name, 'keywords' );
-
                 }
             }
           }
+
           // Coming into the home stretch updating the partner and delivery method.
           $coursepartner = get_the_terms($course->ID,'learning_partner');
           // There's only ever one partner #TODO support multiple partners?
@@ -631,8 +712,8 @@ function course_elm_sync () {
   // If the course doesn't exist within the catalog yet, then we create it!
   //
   foreach($feed->items as $feedcourse) {
-
-      if(!in_array($feedcourse->title, $courseindex) && !empty($feedcourse->title)) {
+    if(!empty($feedcourse->_course_id)) {
+      if(!in_array($feedcourse->_course_id, $courseindex) && !empty($feedcourse->title)) {
 
           // This course isn't in the list of published courses
           // so it is new, so we need to create this course from scratch.
@@ -645,7 +726,8 @@ function course_elm_sync () {
               'post_excerpt' => substr(sanitize_text_field($feedcourse->summary), 0, 100),
               'meta_input'   => array(
                   'course_link' => esc_url_raw($feedcourse->url),
-                  'elm_course_code' => $feedcourse->id
+                  'elm_course_code' => $feedcourse->id,
+                  'elm_course_id' => $feedcourse->_course_id
               )
           );
           // Actually create the new post so that we can move on 
@@ -661,8 +743,8 @@ function course_elm_sync () {
             wp_set_object_terms( $post_id, $keywords, 'keywords', true);
           }
           if(!empty($feedcourse->tags)) {
-            $cats = explode(',', $feedcourse->tags);
-            wp_set_object_terms( $post_id, $cats, 'course_category', true);
+            $topics = explode(',', $feedcourse->tags);
+            wp_set_object_terms( $post_id, $topics, 'topics', true);
           }
 
           // $to = 'allan.haggett@gov.bc.ca';
@@ -674,6 +756,7 @@ function course_elm_sync () {
       } 
       // otherwise, we've already dealt with things in the previous loop 
       // so do nothing else
+    }
   }
 
   // header('Location: /learninghub/wp-admin/edit.php?post_type=course');
