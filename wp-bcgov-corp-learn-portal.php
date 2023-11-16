@@ -530,8 +530,8 @@ function course_elm_sync () {
 
           // Get the details for the feedcourse so we can compare
           foreach($feed->items as $f) {
-            if(!empty($f->title)) {
-              if($f->title == $course->post_title) {
+            if(!empty($f->_course_id)) {
+              if($f->_course_id == $course->elm_course_id) {
                 $feedcourse = $f;
               }
             }
@@ -544,6 +544,10 @@ function course_elm_sync () {
           // Compare more throughly for any updates.
           // If everything is the same then we're not actually touching the 
           // database at all in this process.
+          if($feedcourse->title != $course->post_title) {
+            $course->post_title = $feedcourse->title;
+          }
+          
           if($feedcourse->summary != $course->post_content) {
               // update post content
               $course->post_content = $feedcourse->summary;
@@ -573,7 +577,7 @@ function course_elm_sync () {
           }
           // ELM course code e.g., ITEM-2089
           if($feedcourse->id != $course->elm_course_code) {
-            update_post_meta( $course->ID, 'elm_course_code', $feedcourse->_course_code );
+            update_post_meta( $course->ID, 'elm_course_code', $feedcourse->id );
           }
 
           // Get the categories for this course from the feed
@@ -597,8 +601,8 @@ function course_elm_sync () {
                 array_push($ctindex,trim($ct->name));
               }
             }
-            // echo '<pre>'; print_r($ctindex); exit;
-            // Store any new cats in here
+
+            // Store any new topics in here
             $newtops = [];
             // Run through each cat in the feed and check it
             foreach($feedtops as $ft) {
@@ -612,16 +616,19 @@ function course_elm_sync () {
             // If the newcats array isn't empty, run wp_set_object_terms against it
             if(!empty($newtops)) {
               wp_set_object_terms( $course->ID, $feedtops, 'topics', false);
-            }
-
-            // Now let's loop through each of the existing cats so as to remove 
-            // terms which don't exist in the terms in the feed.
-            if(!empty($coursetops)) { // this is a bit of repeat but I kinda like the separation
-              foreach($coursetops as $ct) {
-                if(!in_array($ct->name, $feedtops)) {
-                    // The name of this course cat isn't in the feed cats
-                    // Delete the old category!
-                    wp_remove_object_terms( $course->ID, $ct->name, 'topics' );
+            } else {
+              // If there are new topics, the above renders the below moot, since
+              // it has the last paramter set to 'false' which has the effect of
+              // removing any items from the db NOT in the array.
+              // But if there aren't any new topics, then we still need to loop 
+              // through and remove terms which don't exist in the terms in the feed.
+              if(!empty($coursetops)) {
+                foreach($coursetops as $ct) {
+                  if(!in_array($ct->name, $feedtops)) {
+                      // The name of this course topic isn't in the feed topics
+                      // Delete the old topic!
+                      wp_remove_object_terms( $course->ID, $ct->name, 'topics' );
+                  }
                 }
               }
             }
@@ -685,6 +692,13 @@ function course_elm_sync () {
           }
 
           // Coming into the home stretch updating the partner and delivery method.
+          $group = get_the_terms($course->ID,'groups');
+          // There's only ever one group
+          if(!empty($feedcourse->_group)) {
+            if($group[0]->name != $feedcourse->_group) {
+              wp_set_object_terms( $course->ID, sanitize_text_field($feedcourse->_group), 'groups', false);
+            }
+          }
           $coursepartner = get_the_terms($course->ID,'learning_partner');
           // There's only ever one partner #TODO support multiple partners?
           if($coursepartner[0]->name != $feedcourse->_learning_partner) {
