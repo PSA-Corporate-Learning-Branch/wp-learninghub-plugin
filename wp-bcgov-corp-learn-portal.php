@@ -467,8 +467,8 @@ function course_elm_sync () {
   }
 
   // Get the feed and parse it into an array.
-  $f = file_get_contents('https://bigaddposse.com/learning-partner-courses.json');
-  // $f = file_get_contents('https://learn.bcpublicservice.gov.bc.ca/learning-hub/learning-partner-courses.json');
+  // $f = file_get_contents('https://bigaddposse.com/learning-partner-courses.json');
+  $f = file_get_contents('https://learn.bcpublicservice.gov.bc.ca/learning-hub/learning-partner-courses.json');
   $feed = json_decode($f);
   
   // Create a simple index of course names that are in the feed
@@ -476,8 +476,10 @@ function course_elm_sync () {
   // we loop through all the published courses.
   $feedindex = [];
   foreach($feed->items as $feedcourse) {
-    if(!empty($feedcourse->_course_id)) {
-      array_push($feedindex, $feedcourse->_course_id);
+    if(!empty($feedcourse->title)) {
+    // if(!empty($feedcourse->_course_id)) {
+      array_push($feedindex, $feedcourse->title);
+      // array_push($feedindex, $feedcourse->_course_id);
     }
   }
   
@@ -523,15 +525,19 @@ function course_elm_sync () {
       // Start by adding all the course titles to the courseindex array so that
       // after this loop runs through, we can loop through the feed again
       // and find the courses that are new and need to be created from scratch.
-      array_push($courseindex, $course->elm_course_id);
+      array_push($courseindex, $course->post_title);
+      // array_push($courseindex, $course->elm_course_id);
 
       // Does the course title match a title that's in the feed?
-      if(in_array($course->elm_course_id, $feedindex)) {
+      if(in_array($course->post_title, $feedindex)) {
+      // if(in_array($course->elm_course_id, $feedindex)) {
 
           // Get the details for the feedcourse so we can compare
           foreach($feed->items as $f) {
-            if(!empty($f->_course_id)) {
-              if($f->_course_id == $course->elm_course_id) {
+            if(!empty($f->title)) {
+            // if(!empty($f->_course_id)) {
+              if($f->title == $course->post_title) {
+              // if($f->_course_id == $course->elm_course_id) {
                 $feedcourse = $f;
               }
             }
@@ -544,9 +550,10 @@ function course_elm_sync () {
           // Compare more throughly for any updates.
           // If everything is the same then we're not actually touching the 
           // database at all in this process.
-          if($feedcourse->title != $course->post_title) {
-            $course->post_title = $feedcourse->title;
-          }
+          // #TODO when we switch back to course id lookup uncomment this:
+          // if($feedcourse->title != $course->post_title) {
+          //   $course->post_title = $feedcourse->title;
+          // }
           
           if($feedcourse->summary != $course->post_content) {
               // update post content
@@ -578,6 +585,12 @@ function course_elm_sync () {
           // ELM course code e.g., ITEM-2089
           if($feedcourse->id != $course->elm_course_code) {
             update_post_meta( $course->ID, 'elm_course_code', $feedcourse->id );
+          }
+          // ELM course ID e.g., 29916
+          // This should be commented out when the match index is set to 
+          // this field instead of the name/title.
+          if($feedcourse->_course_id != $course->elm_course_id) {
+            update_post_meta( $course->ID, 'elm_course_id', $feedcourse->_course_id );
           }
 
           // Get the categories for this course from the feed
