@@ -740,7 +740,8 @@ function course_elm_sync () {
   //
   foreach($feed->items as $feedcourse) {
     if(!empty($feedcourse->_course_id)) {
-      if(!in_array($feedcourse->_course_id, $courseindex) && !empty($feedcourse->title)) {
+      if(!in_array($feedcourse->title, $courseindex) && !empty($feedcourse->title)) {
+      // if(!in_array($feedcourse->_course_id, $courseindex) && !empty($feedcourse->title)) {
 
           // This course isn't in the list of published courses
           // so it is new, so we need to create this course from scratch.
@@ -815,7 +816,7 @@ function curator_sync () {
   // we loop through all the published courses.
   $feedindex = [];
   foreach($feed->pathways as $feedcourse) {
-    array_push($feedindex, htmlentities(trim($feedcourse->name)));
+    array_push($feedindex, trim($feedcourse->id));
   }
 
   // Now we can loop through each of the exisiting published courses
@@ -860,46 +861,62 @@ function curator_sync () {
       // Start by adding all the course titles to the courseindex array so that
       // after this loop runs through, we can loop through the feed again
       // and find the courses that are new and need to be created from scratch.
-      array_push($courseindex, htmlentities(trim($course->post_title)));
+      array_push($courseindex, htmlentities(trim($course->pathway_id)));
 
       // Does the course title match a title that's in the feed?
-      if(in_array(htmlentities(trim($course->post_title)), $feedindex)) {
+      if(in_array(trim($course->pathway_id), $feedindex)) {
 
           // Get the details for the feedcourse so we can compare
           foreach($feed->pathways as $f) {
-              if(trim($f->name) == trim($course->post_title)) {
+              if(trim($f->id) == trim($course->pathway_id)) {
                 $feedcourse = $f;
               }
           }
+            // Set a flag to determine if the course has been updated
+          // so that we can not touch the database if we don't need to.
+          $courseupdated = 0;
           
           // Compare more throughly for any updates.
           // If everything is the same then we're not actually touching the 
           // database at all in this process.
+          if($feedcourse->name != $course->post_title) {
+              // update post title
+              $course->post_title = $feedcourse->name;
+              $courseupdated = 1;
+          }
           if($feedcourse->objective != $course->post_content) {
               // update post content
               $course->post_content = $feedcourse->objective;
               $course->post_excerpt = $feedcourse->objective;
+              $courseupdated = 1;
           }
+          
+          // Make sure it's published just in case we're matching against a 
+          // course that is currently private.
+          if($course->post_status == 'private') {
+            $course->post_status = 'publish';
+            // Something changed, so we need to update the database.
+            $courseupdated = 1;
+          }
+
+          // That's it for core details, so let's update the post if we need to.
+          // After this we're updating the taxonomies & meta which happens with 
+          // separate functions.
+          if($courseupdated) {
+            wp_update_post($course);
+          }
+
+
           $fcurl = 'https://learningcurator.gww.gov.bc.ca/p/' . $feedcourse->slug;
           if($fcurl != $course->course_link) {
               update_post_meta( $course->ID, 'course_link', $fcurl );
           }
-          // Make sure it's published just in case we're matching against a 
-          // course that is currently private.
-          $course->post_status = 'publish';
-
-          // That's it for core details, so let's update the post.
-          // After this we're updating the taxonomies which happens with 
-          // separate functions.
-          wp_update_post($course);
-
 
           #TODO update topics and maybe keywords too?
           $coursetop = get_the_terms($course->ID,'topics');
           if($coursetop[0]->name != $feedcourse->topic->name) {
             wp_set_object_terms( $course->ID, sanitize_text_field($feedcourse->topic->name), 'topics', false);
           }
-
 
           // Coming into the home stretch updating the partner and delivery method.
           $coursepartner = get_the_terms($course->ID,'learning_partner');
@@ -926,7 +943,7 @@ function curator_sync () {
   //
   foreach($feed->pathways as $feedcourse) {
 
-      if(!in_array($feedcourse->name, $courseindex) && !empty($feedcourse->name)) {
+      if(!in_array($feedcourse->id, $courseindex) && !empty($feedcourse->id)) {
 
           // This course isn't in the list of published courses
           // so it is new, so we need to create this course from scratch.
@@ -939,7 +956,8 @@ function curator_sync () {
               'post_content' => sanitize_text_field($feedcourse->objective),
               'post_excerpt' => substr(sanitize_text_field($feedcourse->objective), 0, 100),
               'meta_input'   => array(
-                  'course_link' => esc_url_raw($fcurl)
+                  'course_link' => esc_url_raw($fcurl),
+                  'pathway_id' => $feedcourse->id
               )
           );
           // Actually create the new post so that we can move on 
@@ -949,6 +967,7 @@ function curator_sync () {
           wp_set_object_terms( $post_id, 'Curated Pathway', 'delivery_method', false);
           // wp_set_object_terms( $post_id, sanitize_text_field($feedcourse->_learning_partner), 'learning_partner', false);
           wp_set_object_terms( $post_id, sanitize_text_field($feedcourse->topic->name), 'topics', false);
+          wp_set_object_terms( $post_id, 'Complimentary', 'groups', false);
           wp_set_object_terms( $post_id, 'Learning Centre', 'learning_partner', false);
           wp_set_object_terms( $post_id, 'PSA Learning Curator', 'external_system', false);
 
