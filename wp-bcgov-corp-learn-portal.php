@@ -476,10 +476,8 @@ function course_elm_sync () {
   // we loop through all the published courses.
   $feedindex = [];
   foreach($feed->items as $feedcourse) {
-    if(!empty($feedcourse->title)) {
-    // if(!empty($feedcourse->_course_id)) {
-      array_push($feedindex, $feedcourse->title);
-      // array_push($feedindex, $feedcourse->_course_id);
+    if(!empty($feedcourse->_course_id)) {
+      array_push($feedindex, $feedcourse->_course_id);
     }
   }
   
@@ -525,19 +523,15 @@ function course_elm_sync () {
       // Start by adding all the course titles to the courseindex array so that
       // after this loop runs through, we can loop through the feed again
       // and find the courses that are new and need to be created from scratch.
-      array_push($courseindex, $course->post_title);
-      // array_push($courseindex, $course->elm_course_id);
+      array_push($courseindex, $course->elm_course_id);
 
       // Does the course title match a title that's in the feed?
-      if(in_array($course->post_title, $feedindex)) {
-      // if(in_array($course->elm_course_id, $feedindex)) {
+      if(in_array($course->elm_course_id, $feedindex)) {
 
           // Get the details for the feedcourse so we can compare
           foreach($feed->items as $f) {
-            if(!empty($f->title)) {
-            // if(!empty($f->_course_id)) {
-              if($f->title == $course->post_title) {
-              // if($f->_course_id == $course->elm_course_id) {
+            if(!empty($f->_course_id)) {
+              if($f->_course_id == $course->elm_course_id) {
                 $feedcourse = $f;
               }
             }
@@ -550,10 +544,9 @@ function course_elm_sync () {
           // Compare more throughly for any updates.
           // If everything is the same then we're not actually touching the 
           // database at all in this process.
-          // #TODO when we switch back to course id lookup uncomment this:
-          // if($feedcourse->title != $course->post_title) {
-          //   $course->post_title = $feedcourse->title;
-          // }
+          if($feedcourse->title != $course->post_title) {
+            $course->post_title = $feedcourse->title;
+          }
           
           if($feedcourse->summary != $course->post_content) {
               // update post content
@@ -740,8 +733,7 @@ function course_elm_sync () {
   //
   foreach($feed->items as $feedcourse) {
     if(!empty($feedcourse->_course_id)) {
-      if(!in_array($feedcourse->title, $courseindex) && !empty($feedcourse->title)) {
-      // if(!in_array($feedcourse->_course_id, $courseindex) && !empty($feedcourse->title)) {
+      if(!in_array($feedcourse->_course_id, $courseindex) && !empty($feedcourse->title)) {
 
           // This course isn't in the list of published courses
           // so it is new, so we need to create this course from scratch.
