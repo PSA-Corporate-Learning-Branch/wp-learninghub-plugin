@@ -356,21 +356,25 @@ function course_archive_template( $archive_template ) {
 
 function course_tax_template( $tax_template ) {
   global $post;
-  if ( is_tax ( 'course_category' ) ) {
-    $tax_template = dirname( __FILE__ ) . '/taxonomy.php';
-  }
-  if ( is_tax ( 'learning_partner' ) ) {
-    $tax_template = dirname( __FILE__ ) . '/taxonomy-partner.php';
-  }
-  if ( is_tax ( 'topics' ) ) {
-    $tax_template = dirname( __FILE__ ) . '/taxonomy-topics.php';
-  }
-  if ( is_tax ( 'delivery_method' ) ) {
-    $tax_template = dirname( __FILE__ ) . '/taxonomy-delivery-method.php';
-  }
-  if ( is_tax ( 'external_system' ) ) {
-    $tax_template = dirname( __FILE__ ) . '/taxonomy-external-system.php';
-  }
+  $tax_template = dirname( __FILE__ ) . '/taxonomy.php';
+  // if ( is_tax ( 'course_category' ) ) {
+  //   $tax_template = dirname( __FILE__ ) . '/taxonomy.php';
+  // }
+  // if ( is_tax ( 'learning_partner' ) ) {
+  //   $tax_template = dirname( __FILE__ ) . '/taxonomy-partner.php';
+  // }
+  // if ( is_tax ( 'groups' ) ) {
+  //   $tax_template = dirname( __FILE__ ) . '/taxonomy-groups.php';
+  // }
+  // if ( is_tax ( 'topics' ) ) {
+  //   $tax_template = dirname( __FILE__ ) . '/taxonomy-topics.php';
+  // }
+  // if ( is_tax ( 'delivery_method' ) ) {
+  //   $tax_template = dirname( __FILE__ ) . '/taxonomy-delivery-method.php';
+  // }
+  // if ( is_tax ( 'external_system' ) ) {
+  //   $tax_template = dirname( __FILE__ ) . '/taxonomy-external-system.php';
+  // }
   return $tax_template;
 }
 
@@ -467,7 +471,10 @@ function course_elm_sync () {
   }
 
   // Get the feed and parse it into an array.
-  // $f = file_get_contents('https://bigaddposse.com/learning-partner-courses.json');
+  // The following JSON end point is created as part of the ETL process 
+  // of LSApp https://gww.bcpublicservice.gov.bc.ca/lsapp/course-feed/
+  // Which takes two separate ELM queries and merges the output into this
+  // JSON feed.
   $f = file_get_contents('https://learn.bcpublicservice.gov.bc.ca/learning-hub/learning-partner-courses.json');
   $feed = json_decode($f);
   
@@ -582,9 +589,9 @@ function course_elm_sync () {
           // ELM course ID e.g., 29916
           // This should be commented out when the match index is set to 
           // this field instead of the name/title.
-          if($feedcourse->_course_id != $course->elm_course_id) {
-            update_post_meta( $course->ID, 'elm_course_id', $feedcourse->_course_id );
-          }
+          // if($feedcourse->_course_id != $course->elm_course_id) {
+          //   update_post_meta( $course->ID, 'elm_course_id', $feedcourse->_course_id );
+          // }
 
           // Get the categories for this course from the feed
           $feedtops = explode(', ', $feedcourse->tags);
@@ -724,7 +731,7 @@ function course_elm_sync () {
           wp_update_post( $course );
 
       }
-  }
+  } // endforeach ($courses as $course)
 
   // Next, let's loop through the feed again, this time looking at the newly created
   // $courseindex array with just the published course names in it for easy lookup
@@ -779,6 +786,11 @@ function course_elm_sync () {
     }
   }
 
+  // $now = date('Y-m-d/TH:i:s');
+  // $message = 'External Systems Sync run ' . $now;
+  // following would depend on the wp action log plugin being installed...
+  // do_action( ‘wp_log_info’, $label, $message );
+  
   // header('Location: /learninghub/wp-admin/edit.php?post_type=course');
   header('Location: edit.php?noheader=true&post_type=course&page=curator_sync');
 }
@@ -904,6 +916,63 @@ function curator_sync () {
               update_post_meta( $course->ID, 'course_link', $fcurl );
           }
 
+
+          // Get the keywords for this course from the feed.
+          $feedkeys = explode(',', $feedcourse->keywords);
+          // Load up the categories currently associated with the course.
+          $coursekeys = get_the_terms($course->ID,'keywords');
+          if(!empty($feedkeys)) {
+            // Update the course with the feed topics.
+            // Testing if there are new terms and only add new ones. 
+            // Passing an array of new terms rather than having a new 
+            // wp_set_object_terms for each one. So, let's run through
+            // the feed terms, compare with the existing terms and create a new 
+            // array of only new terms, then run wp_set_object_terms with that.
+            //
+            // Create an index of the existing ones to 
+            // match against.
+            $ckindex = [];
+            if(!empty($coursekeys)) {
+              foreach($coursekeys as $ck) {
+                array_push($ckindex,trim($ck->name));
+              }
+            }
+            // echo '<pre>'; print_r($ctindex); exit;
+            // Store any new cats in here
+            $newkeys = [];
+            // Run through each cat in the feed and check it
+            foreach($feedkeys as $fk) {
+              // Does this term NOT exist in the existing cats?
+              if(!in_array($fk,$ckindex)) {
+                // Add it to the array
+                array_push($newkeys,$fk);
+              }
+            }
+            
+            // If the newcats array isn't empty, run wp_set_object_terms against
+            // the new terms all in one go
+            if(!empty($newkeys)) {
+              wp_set_object_terms( $course->ID, $feedkeys, 'keywords', false);
+            }
+
+            // But now we also need to account for keywords that have been 
+            // removed, so we quickly create an index of the existing ones to 
+            // match against.
+            $ckindex = [];
+            foreach($coursekeys as $kc) {
+              array_push($ckindex,$kc->name);
+            }
+            // Loop through each of the existing keywords so as to remove terms 
+            // which don't exist in the terms in the feed
+            foreach($coursekeys as $ck) {
+                if(!in_array($ck->name, $feedkeys)) {
+                    // The name of this course key isn't in the feed keys
+                    // Delete the old keyword!
+                    wp_remove_object_terms( $course->ID, $ck->name, 'keywords' );
+                }
+            }
+          }
+
           #TODO update topics and maybe keywords too?
           $coursetop = get_the_terms($course->ID,'topics');
           if($coursetop[0]->name != $feedcourse->topic->name) {
@@ -962,6 +1031,10 @@ function curator_sync () {
           wp_set_object_terms( $post_id, 'Complimentary', 'groups', false);
           wp_set_object_terms( $post_id, 'Learning Centre', 'learning_partner', false);
           wp_set_object_terms( $post_id, 'PSA Learning Curator', 'external_system', false);
+          if(!empty($feedcourse->keywords)) {
+            $keywords = explode(',', $feedcourse->keywords);
+            wp_set_object_terms( $post_id, $keywords, 'keywords', true);
+          }
 
 
       } 
@@ -969,7 +1042,6 @@ function curator_sync () {
       // so do nothing else
   }
   
-  // header('Location: /learninghub/wp-admin/edit.php?post_type=course');
   header('Location: edit.php?noheader=true&post_type=course&page=expired_courses');
 }
 
@@ -1015,6 +1087,13 @@ function expired_courses () {
     }
     header('Location: /learninghub/wp-admin/edit.php?post_type=course');
 }
+
+
+
+if ( ! wp_next_scheduled( 'twicedaily_schedule_hook' ) ) {
+  wp_schedule_event( time(), 'twicedaily', 'course_elm_sync' );
+}
+
 
 
 /* Fire our meta box setup function on the post editor screen. */
