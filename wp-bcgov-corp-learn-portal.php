@@ -273,11 +273,42 @@ function my_taxonomies_course_groups() {
     );
     register_taxonomy( 'groups', 'course', $args );
 }
+/** 
+ * Course audience aligning with Corporate Learning Framework
+ */
+function my_taxonomies_course_audience() {
+    $labels = array(
+        'name'              => _x( 'Audiences', 'taxonomy general name' ),
+        'singular_name'     => _x( 'Audience', 'taxonomy singular name' ),
+        'search_items'      => __( 'Search Audiences' ),
+        'all_items'         => __( 'All Audiences' ),
+        'parent_item'       => __( 'Parent Audience' ),
+        'parent_item_colon' => __( 'Parent Audience' ),
+        'edit_item'         => __( 'Edit Audience' ), 
+        'update_item'       => __( 'Update Audience' ),
+        'add_new_item'      => __( 'Add New Audience' ),
+        'new_item_name'     => __( 'New Audiences' ),
+        'menu_name'         => __( 'Audiences' ),
+    );
+    $args = array(
+        'labels' => $labels,
+        'hierarchical' => true,
+        'show_in_rest' => true,
+        'capabilities' => array(
+          'manage_terms' => 'edit_posts',
+          'edit_terms' => 'manage_options',
+          'delete_terms' => 'manage_options',
+          'assign_terms' => 'edit_posts'
+        ),
+    );
+    register_taxonomy( 'audience', 'course', $args );
+}
 
 /** 
  * Now let's initiate all of those awesome taxonomies!
  */
 
+add_action( 'init', 'my_taxonomies_course_audience', 0 );
 add_action( 'init', 'my_taxonomies_course_groups', 0 );
 add_action( 'init', 'my_taxonomies_course_topics', 0 );
 // add_action( 'init', 'my_taxonomies_course_category', 0 );
@@ -1028,7 +1059,7 @@ function curator_sync () {
           wp_set_object_terms( $post_id, 'Curated Pathway', 'delivery_method', false);
           // wp_set_object_terms( $post_id, sanitize_text_field($feedcourse->_learning_partner), 'learning_partner', false);
           wp_set_object_terms( $post_id, sanitize_text_field($feedcourse->topic->name), 'topics', false);
-          wp_set_object_terms( $post_id, 'Complimentary', 'groups', false);
+          wp_set_object_terms( $post_id, 'Complementary', 'groups', false);
           wp_set_object_terms( $post_id, 'Learning Centre', 'learning_partner', false);
           wp_set_object_terms( $post_id, 'PSA Learning Curator', 'external_system', false);
           if(!empty($feedcourse->keywords)) {
