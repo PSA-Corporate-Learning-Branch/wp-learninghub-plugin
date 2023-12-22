@@ -391,21 +391,24 @@ function course_tax_template( $tax_template ) {
   // if ( is_tax ( 'course_category' ) ) {
   //   $tax_template = dirname( __FILE__ ) . '/taxonomy.php';
   // }
-  // if ( is_tax ( 'learning_partner' ) ) {
-  //   $tax_template = dirname( __FILE__ ) . '/taxonomy-partner.php';
-  // }
-  // if ( is_tax ( 'groups' ) ) {
-  //   $tax_template = dirname( __FILE__ ) . '/taxonomy-groups.php';
-  // }
-  // if ( is_tax ( 'topics' ) ) {
-  //   $tax_template = dirname( __FILE__ ) . '/taxonomy-topics.php';
-  // }
-  // if ( is_tax ( 'delivery_method' ) ) {
-  //   $tax_template = dirname( __FILE__ ) . '/taxonomy-delivery-method.php';
-  // }
-  // if ( is_tax ( 'external_system' ) ) {
-  //   $tax_template = dirname( __FILE__ ) . '/taxonomy-external-system.php';
-  // }
+  if ( is_tax ( 'learning_partner' ) ) {
+    $tax_template = dirname( __FILE__ ) . '/taxonomy-partner.php';
+  }
+  if ( is_tax ( 'audience' ) ) {
+    $tax_template = dirname( __FILE__ ) . '/taxonomy-audience.php';
+  }
+  if ( is_tax ( 'groups' ) ) {
+    $tax_template = dirname( __FILE__ ) . '/taxonomy-groups.php';
+  }
+  if ( is_tax ( 'topics' ) ) {
+    $tax_template = dirname( __FILE__ ) . '/taxonomy-topics.php';
+  }
+  if ( is_tax ( 'delivery_method' ) ) {
+    $tax_template = dirname( __FILE__ ) . '/taxonomy-delivery-method.php';
+  }
+  if ( is_tax ( 'external_system' ) ) {
+    $tax_template = dirname( __FILE__ ) . '/taxonomy-external-system.php';
+  }
   return $tax_template;
 }
 
@@ -712,7 +715,7 @@ function course_elm_sync () {
           if($coursepartner[0]->name != $feedcourse->_learning_partner) {
               wp_set_object_terms( $course->ID, sanitize_text_field($feedcourse->_learning_partner), 'learning_partner', false);
           }
-          
+
           // There's only ever one delivery method
           $coursemethod = get_the_terms($course->ID,'delivery_method');
           if($coursemethod[0]->name != $feedcourse->delivery_method) {
