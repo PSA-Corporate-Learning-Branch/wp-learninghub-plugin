@@ -624,59 +624,7 @@ function course_elm_sync () {
           //   update_post_meta( $course->ID, 'elm_course_id', $feedcourse->_course_id );
           // }
 
-          // Get the categories for this course from the feed
-          $feedtops = explode(', ', $feedcourse->tags);
-          // Load up the categories currently associated with the course
-          $coursetops = get_the_terms($course->ID,'topics');
 
-          if(!empty($feedtops)) { 
-            // Update the course with the feed topics.
-            // Testing if there are new terms and only add new ones. 
-            // Passing an array of new terms rather than having a new 
-            // wp_set_object_terms for each one. So, let's run through
-            // the feed terms, compare with the existing terms and create a new 
-            // array of only new terms, then run wp_set_object_terms with that.
-            //
-            // Create an index of the existing ones to 
-            // match against.
-            $ctindex = [];
-            if(!empty($coursetops)) {
-              foreach($coursetops as $ct) {
-                array_push($ctindex,trim($ct->name));
-              }
-            }
-
-            // Store any new topics in here
-            $newtops = [];
-            // Run through each cat in the feed and check it
-            foreach($feedtops as $ft) {
-              // Does this term NOT exist in the existing cats?
-              if(!in_array($ft,$ctindex)) {
-                // Add it to the array
-                array_push($newtops,$ft);
-              }
-            }
-            
-            // If the newcats array isn't empty, run wp_set_object_terms against it
-            if(!empty($newtops)) {
-              wp_set_object_terms( $course->ID, $feedtops, 'topics', false);
-            } else {
-              // If there are new topics, the above renders the below moot, since
-              // it has the last paramter set to 'false' which has the effect of
-              // removing any items from the db NOT in the array.
-              // But if there aren't any new topics, then we still need to loop 
-              // through and remove terms which don't exist in the terms in the feed.
-              if(!empty($coursetops)) {
-                foreach($coursetops as $ct) {
-                  if(!in_array($ct->name, $feedtops)) {
-                      // The name of this course topic isn't in the feed topics
-                      // Delete the old topic!
-                      wp_remove_object_terms( $course->ID, $ct->name, 'topics' );
-                  }
-                }
-              }
-            }
-          }
 
           // Repeat the process above but for keywords instead of categories.
           // Get the keywords for this course from the feed.
@@ -735,19 +683,36 @@ function course_elm_sync () {
             }
           }
 
-          // Coming into the home stretch updating the partner and delivery method.
           $group = get_the_terms($course->ID,'groups');
-          // There's only ever one group
+          // There's only ever one 
           if(!empty($feedcourse->_group)) {
             if($group[0]->name != $feedcourse->_group) {
               wp_set_object_terms( $course->ID, sanitize_text_field($feedcourse->_group), 'groups', false);
             }
           }
+          
+          $audience = get_the_terms($course->ID,'audience');
+          // There's only ever one 
+          if(!empty($feedcourse->_audience)) {
+            if($audience[0]->name != $feedcourse->_audience) {
+              wp_set_object_terms( $course->ID, sanitize_text_field($feedcourse->_audience), 'audience', false);
+            }
+          }
+          
+          $topic = get_the_terms($course->ID,'topics');
+          // There's only ever one 
+          if(!empty($feedcourse->_topic)) {
+            if($topic[0]->name != $feedcourse->_topic) {
+              wp_set_object_terms( $course->ID, sanitize_text_field($feedcourse->_topic), 'topics', false);
+            }
+          }
+
           $coursepartner = get_the_terms($course->ID,'learning_partner');
           // There's only ever one partner #TODO support multiple partners?
           if($coursepartner[0]->name != $feedcourse->_learning_partner) {
               wp_set_object_terms( $course->ID, sanitize_text_field($feedcourse->_learning_partner), 'learning_partner', false);
           }
+          
           // There's only ever one delivery method
           $coursemethod = get_the_terms($course->ID,'delivery_method');
           if($coursemethod[0]->name != $feedcourse->delivery_method) {
