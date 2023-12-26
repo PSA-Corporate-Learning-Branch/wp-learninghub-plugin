@@ -402,6 +402,8 @@ function course_tax_template( $tax_template ) {
   }
   if ( is_tax ( 'topics' ) ) {
     $tax_template = dirname( __FILE__ ) . '/taxonomy-topics.php';
+
+    
   }
   if ( is_tax ( 'delivery_method' ) ) {
     $tax_template = dirname( __FILE__ ) . '/taxonomy-delivery-method.php';
@@ -975,7 +977,11 @@ function curator_sync () {
           #TODO update topics and maybe keywords too?
           $coursetop = get_the_terms($course->ID,'topics');
           if($coursetop[0]->name != $feedcourse->topic->name) {
-            wp_set_object_terms( $course->ID, sanitize_text_field($feedcourse->topic->name), 'topics', false);
+            $tname = $coursetop[0]->name;
+            if($coursetop[0]->name != 'House of Indigenous Learning') {
+              $tname = 'Indigenous Learning';
+            }
+            wp_set_object_terms( $course->ID, sanitize_text_field($tname), 'topics', false);
           }
 
           // Coming into the home stretch updating the partner and delivery method.
