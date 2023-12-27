@@ -978,7 +978,7 @@ function curator_sync () {
           $coursetop = get_the_terms($course->ID,'topics');
           if($coursetop[0]->name != $feedcourse->topic->name) {
             $tname = $coursetop[0]->name;
-            if($coursetop[0]->name != 'House of Indigenous Learning') {
+            if($feedcourse->topic->name == 'House of Indigenous Learning') {
               $tname = 'Indigenous Learning';
             }
             wp_set_object_terms( $course->ID, sanitize_text_field($tname), 'topics', false);
