@@ -4,7 +4,7 @@ Plugin Name: BC Gov Corporate Learning Hub
 Plugin URI: https://github.com/allanhaggett/wp-bcgov-learning-hub/
 Description: A gateway to everything that BC Gov has to offer for learning opportunities.
 Author: Allan Haggett <allan.haggett@gov.bc.ca>
-Version: 1
+Version: 2.0
 Author URI: https://learningcenter.gww.gov.bc.ca/learninghub/
 */
 
