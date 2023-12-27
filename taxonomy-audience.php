@@ -24,7 +24,7 @@ $post_args = array(
     'ignore_sticky_posts'      => 0,
     'tax_query' => array(
         array (
-            'taxonomy' => 'groups',
+            'taxonomy' => 'audience',
             'field' => 'slug',
             'terms' => $term,
 		)
@@ -54,13 +54,13 @@ $post_my_query = new WP_Query($post_args);
 		</a> 
 		<?php if(!empty($parent->slug)): ?>
 		/ 
-		<a href="/learninghub/groups/<?php echo $parent->slug ?>">
+		<a href="/learninghub/audience/<?php echo $parent->slug ?>">
 			<?php echo $parent->name ?>
 		</a>
 		<?php endif ?>
 	</div>
 	
-	<h1><?php echo $term->name ?> Courses</h1>
+	<h1><?php echo $term->name ?></h1>
 		<?php //the_archive_title( '<h1 class="page-title">', '</h1>' ); ?>
 		<?php if ( $description ) : ?>
 			<div class="archive-description"><?php echo wp_kses_post( wpautop( $description ) ); ?></div>
@@ -71,7 +71,7 @@ $post_my_query = new WP_Query($post_args);
 // Get a list of all sub-categories and output them as simple links
 $topiclist = get_categories(
 						array(
-							'taxonomy' => 'groups',
+							'taxonomy' => 'audience',
 							'orderby' => 'id',
 							'order' => 'DESC',
 							'hide_empty' => 1
@@ -80,7 +80,7 @@ $topiclist = get_categories(
 foreach($topiclist as $topic) {
 	$active = '';
 	if($topic->name == $term->name) $active = 'active';
-	echo '<a class="'.$active.'" href="/learninghub/groups/'. $topic->slug . '">' . $topic->name . '</a> | ';
+	echo '<a class="'.$active.'" href="/learninghub/audience/'. $topic->slug . '">' . $topic->name . '</a> | ';
 }
 
 //print_r($catlist);
