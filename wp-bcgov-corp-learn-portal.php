@@ -392,24 +392,22 @@ function course_tax_template( $tax_template ) {
   //   $tax_template = dirname( __FILE__ ) . '/taxonomy.php';
   // }
   if ( is_tax ( 'learning_partner' ) ) {
-    $tax_template = dirname( __FILE__ ) . '/taxonomy-partner.php';
+    $tax_template = dirname( __FILE__ ) . '/taxonomy-learning_partner.php';
   }
   if ( is_tax ( 'audience' ) ) {
-    $tax_template = dirname( __FILE__ ) . '/taxonomy-audience.php';
+    $tax_template = dirname( __FILE__ ) . '/taxonomy.php';
   }
   if ( is_tax ( 'groups' ) ) {
-    $tax_template = dirname( __FILE__ ) . '/taxonomy-groups.php';
+    $tax_template = dirname( __FILE__ ) . '/taxonomy.php';
   }
   if ( is_tax ( 'topics' ) ) {
-    $tax_template = dirname( __FILE__ ) . '/taxonomy-topics.php';
-
-    
+    $tax_template = dirname( __FILE__ ) . '/taxonomy.php';
   }
   if ( is_tax ( 'delivery_method' ) ) {
-    $tax_template = dirname( __FILE__ ) . '/taxonomy-delivery-method.php';
+    $tax_template = dirname( __FILE__ ) . '/taxonomy.php';
   }
   if ( is_tax ( 'external_system' ) ) {
-    $tax_template = dirname( __FILE__ ) . '/taxonomy-external-system.php';
+    $tax_template = dirname( __FILE__ ) . '/taxonomy-external_system.php';
   }
   return $tax_template;
 }
@@ -1239,6 +1237,21 @@ function course_save_course_expire_meta ( $post_id, $post ) {
       delete_post_meta( $post_id, $meta_key, $meta_value );
   }
 }
+
+
+
+
+function hub_add_rewrite_rules() {
+  global $wp_rewrite;
+  $new_rules = array(
+      '(groups|topics|audience|delivery_method)/(.+?)/(groups|topics|audience|delivery_method)/(.+?)/(groups|topics|audience|delivery_method)/(.+?)/(groups|topics|audience|delivery_method)/(.+?)/?$' => 'index.php?' . $wp_rewrite->preg_index(1) . '=' . $wp_rewrite->preg_index(2) . '&' . $wp_rewrite->preg_index(3) . '=' . $wp_rewrite->preg_index(4) . '&' . $wp_rewrite->preg_index(5) . '=' . $wp_rewrite->preg_index(6) . '&' . $wp_rewrite->preg_index(7) . '=' . $wp_rewrite->preg_index(8),
+      '(groups|topics|audience|delivery_method)/(.+?)/(groups|topics|audience|delivery_method)/(.+?)/(groups|topics|audience|delivery_method)/(.+?)/?$' => 'index.php?' . $wp_rewrite->preg_index(1) . '=' . $wp_rewrite->preg_index(2) . '&' . $wp_rewrite->preg_index(3) . '=' . $wp_rewrite->preg_index(4) . '&' . $wp_rewrite->preg_index(5) . '=' . $wp_rewrite->preg_index(6),
+      '(groups|topics|audience|delivery_method)/(.+?)/(groups|topics|audience|delivery_method)/(.+?)/?$' => 'index.php?' . $wp_rewrite->preg_index(1) . '=' . $wp_rewrite->preg_index(2) . '&' . $wp_rewrite->preg_index(3) . '=' . $wp_rewrite->preg_index(4),
+      '(groups|topics|audience|delivery_method)/(.+)/?$' => 'index.php?' . $wp_rewrite->preg_index(1) . '=' . $wp_rewrite->preg_index(2)
+  );
+  $wp_rewrite->rules = $new_rules + $wp_rewrite->rules;
+}
+add_action( 'generate_rewrite_rules', 'hub_add_rewrite_rules' );
 
 
 

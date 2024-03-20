@@ -16,14 +16,93 @@ get_header();
 /* Start the Loop */
 while ( have_posts() ) :
 	the_post();
-
-	?>
-
-
-
+?>
 <div class="alignwide">
 
 <div class="wp-block-columns alignfull" style="padding-top: 2em;"><!-- wp:column -->
+<div class="wp-block-column menus" style="background-color: #FFF; border-radius: .5em; flex: 29%; padding: 2%; margin-right: 1%;">
+<div><strong>Groups</strong></div>
+	<?php 
+	$groups = get_categories(
+							array(
+								'taxonomy' => 'groups',
+								'orderby' => 'id',
+								'order' => 'DESC',
+								'hide_empty' => '0'
+							));
+	?>
+	<?php foreach($groups as $g): ?>
+		<?php $active = ''; if($g->slug == $groupterm) $active = 'active'; ?>
+		<div style="margin:0;padding:0;">
+			<a class="<?= $active ?>" href="/learninghub/groups/<?= $g->slug ?>/<?= $to ?><?= $aud ?><?= $dms ?>">
+				<?= $g->name ?>
+			</a>
+			(<?= $g->count ?>)
+		</div>
+	<?php endforeach ?>
+
+	<div><strong>Topics</strong></div>
+	<?php 
+	$topics = get_categories(
+							array(
+								'taxonomy' => 'topics',
+								'orderby' => 'name',
+								'order' => 'ASC',
+								'hide_empty' => '0'
+							));
+	?>
+	<?php foreach($topics as $t): ?>
+		<?php $active = ''; if($t->slug == $topicterm) $active = 'active'; ?>
+		<div style="margin:0;padding:0;">
+			<a class="<?= $active ?>" href="/learninghub/<?= $gr ?>topics/<?= $t->slug ?>/<?= $aud ?><?= $dms ?>">
+				<?= $t->name ?>
+			</a>
+			(<?= $t->count ?>)
+		</div>
+	<?php endforeach ?>
+	
+	<div><strong>Audience</strong></div>
+	<?php 
+	$audiences = get_categories(
+							array(
+								'taxonomy' => 'audience',
+								'orderby' => 'id',
+								'order' => 'DESC',
+								'hide_empty' => '0'
+							));
+	?>
+	<?php foreach($audiences as $a): ?>
+		<?php $active = ''; if($a->slug == $audienceterm) $active = 'active'; ?>
+		<div style="margin:0;padding:0;">
+			<a class="<?= $active ?>" href="/learninghub/<?= $gr ?><?= $to ?>audience/<?= $a->slug ?>/<?= $dms ?>">
+				<?= $a->name ?>
+			</a>
+			(<?= $a->count ?>)
+		</div>
+	<?php endforeach ?>
+	<div><strong>Delivery Method</strong></div>
+	<?php 
+	$dms = get_categories(
+							array(
+								'taxonomy' => 'delivery_method',
+								'orderby' => 'id',
+								'order' => 'DESC',
+								'hide_empty' => '0',
+								'include' => array(3,37,82,236,410)
+							));
+	?>
+	<?php foreach($dms as $d): ?>
+		<?php $active = ''; if($d->slug == $dmterm) $active = 'active'; ?>
+		<div style="margin:0;padding:0;">
+			<a class="<?= $active ?>" href="/learninghub/<?= $gr ?><?= $to ?><?= $aud ?>delivery_method/<?= $d->slug ?>">
+				<?= $d->name ?>
+			</a>
+			(<?= $d->count ?>)
+		</div>
+	<?php endforeach ?>
+
+
+	</div>
 <div class="wp-block-column" style="flex: 66%;">
 <?php the_title( '<h1 class="coursehead">', '</h1>' ); ?>
 <div class="course">
@@ -89,68 +168,7 @@ while ( have_posts() ) :
 
 </div>
 <!-- /wp:column -->
-<!-- wp:column -->
-<div class="wp-block-column" style="flex: 29%; padding: 0 2%;">
 
-<h4>Suggested Courses</h4>
-<div style="background-color: #FFF; border-radius: 5px; padding: .5em;">
-<div>
-    <a href="/learninghub/foundational-courses/">Mandatory &amp; Foundational</a>
-</div>
-<div>
-    <a href="/learninghub/supervisors-and-managers/">Supervisors &amp; Managers</a>
-</div>
-<div>
-    <a href="/learninghub/leadership/">Leadership in the BCPS</a>
-</div>
-</div>
-<h4>Suggested Searches</h4>
-<div style="background-color: #FFF; border-radius: 5px; padding: .5em;">
-<div><a href="/learninghub/?s=flexibleBCPS">#flexibleBCPS</a></div>
-<p>Flexible workplaces? Managing remote teams? The courses and resources you need.</p>
-</div>
-<div style="background-color: #FFF; border-radius: 5px; margin-top: 1em; padding: .5em;">
-<div><a href="/learninghub/?s=BCPSBelonging">#BCPSBelonging</a></div>
-<p>Great courses that cover equity, diversity and inclusion.</p>
-</div>
-<?php 
-$news_args = array(
-    'post_type'                => 'post',
-    'post_status'              => 'publish',
-    'posts_per_page'           => 3,
-    'ignore_sticky_posts'      => 0,
-    'child_of'                 => 0,
-    'parent'                   => 0,
-    'orderby'                  => array('post_date' =>'ASC'),
-    'hide_empty'               => 0,
-    'hierarchical'             => 1,
-    'exclude'                  => '',
-    'include'                  => '',
-    'number'                   => '',
-    'pad_counts'               => true, 
-);
-$news = null;
-$news = new WP_Query($news_args);
-if( $news->have_posts() ) : ?>
-
-    <h4 class="alignwide">Recent News</h4>
-    <div style="background: #FFF; border-radius: 5px; padding: .5em;">
-    <?php while ($news->have_posts()) : $news->the_post(); ?>
-    <div>
-        <a href="<?= the_permalink() ?>">
-            <?= the_title() ?>
-        </a>
-    </div>
-    <?php endwhile ?>
-	</div>
-    
-<?php else: ?>
-    <p>No news is bad news?</p>
-<?php endif; ?>
-<?php wp_reset_query($news); ?>
-
-<!-- /wp:column -->
-</div>
 </div>
 
 

@@ -11,23 +11,55 @@
 
 get_header();
 
-$description = get_the_archive_description();
-$term = get_term_by( 'slug', get_query_var( 'term' ), get_query_var( 'taxonomy' ) );
-$parent = get_term($term->parent, get_query_var('taxonomy') ); // get parent term
-$paged = (get_query_var('paged')) ? get_query_var('paged') : 1;
+$taxquery = [];
+if(get_query_var('groups')) {
+	$groupterm = sanitize_text_field(get_query_var('groups'));
+	$g = array (
+		'taxonomy' => 'groups',
+		'field' => 'slug',
+		'terms' => $groupterm,
+	);
+	array_push($taxquery, $g);
+	$gterm = get_term_by( 'slug', get_query_var( 'groups' ), 'groups');
+}
+if(get_query_var('topics')) {
+	$topicterm = sanitize_text_field(get_query_var('topics'));
+	$t = array (
+		'taxonomy' => 'topics',
+		'field' => 'slug',
+		'terms' => $topicterm,
+	);
+	array_push($taxquery, $t);
+	$tterm = get_term_by( 'slug', get_query_var( 'topics' ), 'topics');
+}
+if(get_query_var('audience')) { 
+	$audienceterm = sanitize_text_field(get_query_var('audience'));
+	$t = array (
+		'taxonomy' => 'audience',
+		'field' => 'slug',
+		'terms' => $audienceterm,
+	);
+	array_push($taxquery, $t);
+	$aterm = get_term_by( 'slug', get_query_var( 'audience' ), 'audience');
+}
+if(get_query_var('delivery_method')) { 
+	$dmterm = sanitize_text_field(get_query_var('delivery_method'));
+	$t = array (
+		'taxonomy' => 'delivery_method',
+		'field' => 'slug',
+		'terms' => $dmterm,
+	);
+	array_push($taxquery, $t);
+	$dterm = get_term_by( 'slug', get_query_var( 'delivery_method' ), 'delivery_method');
+}
+// print_r($gterm);
+
 $post_args = array(
     'post_type'                => 'course',
     'post_status'              => 'publish',
-    'posts_per_page'           => 500,
-    'paged'                    => $paged, 
+    'posts_per_page'           => -1,
     'ignore_sticky_posts'      => 0,
-    'tax_query' => array(
-        array (
-            'taxonomy' => 'topics',
-            'field' => 'slug',
-            'terms' => $term,
-		)
-    ),
+    'tax_query' 			   => $taxquery,
     'orderby'                  => 'name', 
     'order'                    => 'ASC',
     'hide_empty'               => 0,
@@ -40,87 +72,160 @@ $post_args = array(
 $post_my_query = null;
 $post_my_query = new WP_Query($post_args);
 
+// Setup URLs
+$gr = ''; if($groupterm) $gr = 'groups/' . $groupterm . '/';
+$to = ''; if($topicterm) $to = 'topics/' . $topicterm . '/';
+$aud = ''; if($audienceterm) $aud = 'audience/' . $audienceterm . '/';
+$dm = ''; if($dmterm) $dm = 'delivery_method/' . $dmterm . '/';
 ?>
 
-<?php if( $post_my_query->have_posts() ) : ?>
+	<div class="wp-block-columns alignwide" style="padding-top: 2em;">
+	<div class="wp-block-column menus" style="background-color: #FFF; border-radius: .5em; flex: 29%; padding: 2%; margin-right: 1%;">
+	<div><strong>Groups</strong></div>
+	<?php 
+	$groups = get_categories(
+							array(
+								'taxonomy' => 'groups',
+								'orderby' => 'id',
+								'order' => 'DESC',
+								'hide_empty' => '0'
+							));
+	?>
+	<?php foreach($groups as $g): ?>
+		<?php $active = ''; if($g->slug == $groupterm) $active = 'active'; ?>
+		<div style="margin:0;padding:0;">
+			<a class="<?= $active ?>" href="/learninghub/groups/<?= $g->slug ?>/<?= $to ?><?= $aud ?><?= $dms ?>">
+				<?= $g->name ?>
+			</a>
+			(<?= $g->count ?>)
+		</div>
+	<?php endforeach ?>
 
-	<header class="entry-header alignfull" style="background: #FFF; padding: 2em 2em 3em 2em;">
-		<div class="alignwide">
+	<div><strong>Topics</strong></div>
+	<?php 
+	$topics = get_categories(
+							array(
+								'taxonomy' => 'topics',
+								'orderby' => 'name',
+								'order' => 'ASC',
+								'hide_empty' => '0'
+							));
+	?>
+	<?php foreach($topics as $t): ?>
+		<?php $active = ''; if($t->slug == $topicterm) $active = 'active'; ?>
+		<div style="margin:0;padding:0;">
+			<a class="<?= $active ?>" href="/learninghub/<?= $gr ?>topics/<?= $t->slug ?>/<?= $aud ?><?= $dms ?>">
+				<?= $t->name ?>
+			</a>
+			(<?= $t->count ?>)
+		</div>
+	<?php endforeach ?>
 	
-	<div>
-		<a href="/learninghub/course/">
-			All Courses
-		</a> 
-		<?php if(!empty($parent->slug)): ?>
-		/ 
-		<a href="/learninghub/course_category/<?php echo $parent->slug ?>">
-			<?php echo $parent->name ?>
-		</a>
+	<div><strong>Audience</strong></div>
+	<?php 
+	$audiences = get_categories(
+							array(
+								'taxonomy' => 'audience',
+								'orderby' => 'id',
+								'order' => 'DESC',
+								'hide_empty' => '0'
+							));
+	?>
+	<?php foreach($audiences as $a): ?>
+		<?php $active = ''; if($a->slug == $audienceterm) $active = 'active'; ?>
+		<div style="margin:0;padding:0;">
+			<a class="<?= $active ?>" href="/learninghub/<?= $gr ?><?= $to ?>audience/<?= $a->slug ?>/<?= $dms ?>">
+				<?= $a->name ?>
+			</a>
+			(<?= $a->count ?>)
+		</div>
+	<?php endforeach ?>
+	<div><strong>Delivery Method</strong></div>
+	<?php 
+	$dms = get_categories(
+							array(
+								'taxonomy' => 'delivery_method',
+								'orderby' => 'id',
+								'order' => 'DESC',
+								'hide_empty' => '0',
+								'include' => array(3,37,82,236,410)
+							));
+	?>
+	<?php foreach($dms as $d): ?>
+		<?php $active = ''; if($d->slug == $dmterm) $active = 'active'; ?>
+		<div style="margin:0;padding:0;">
+			<a class="<?= $active ?>" href="/learninghub/<?= $gr ?><?= $to ?><?= $aud ?>delivery_method/<?= $d->slug ?>">
+				<?= $d->name ?>
+			</a>
+			(<?= $d->count ?>)
+		</div>
+	<?php endforeach ?>
+
+
+	</div>
+	<div class="wp-block-column" style="flex: 66%;">
+	<div style="background-color: #FFF; border-radius: .5em; magrin: 1em 0; padding: 1em;">
+	<div class="">
+		<div><strong>Filters:</strong></div>
+		<?php if($groupterm): ?>
+		<div class="">
+		<?php $home = ''; if(!$to && !$aud && !$dm) $home = 'course/'; ?>
+			<a style="background-color: #FFF; border-radius: 5px; color: #333; display: inline-block; padding: 2px 10px; text-decoration: none;" 
+				href="/learninghub/<?= $home ?><?= $to ?><?= $aud ?><?= $dm ?>">
+					<span style="background-color: #003366; border-radius: 3px; color: #FFF; display: inline-block; font-size: 12px; padding: 0 4px;">Remove</span> 
+			</a>
+			<strong><?= $gterm->name ?></strong>: 
+			<?= $gterm->description ?>
+		</div>
 		<?php endif ?>
+		<?php if($topicterm): ?>
+		<div class="">
+		<?php $home = ''; if(!$gr && !$aud && !$dm) $home = 'course/'; ?>
+		<a style="background-color: #FFF; border-radius: 5px; color: #333; display: inline-block; padding: 2px 10px; text-decoration: none;" 
+			href="/learninghub/<?= $home ?><?= $gr ?><?= $aud ?><?= $dm ?>">
+				<span style="hover:background-color: #145693; background-color: #003366; border-radius: 3px; color: #FFF; display: inline-block; font-size: 12px; padding: 0 4px;">Remove</span> 
+			</a>
+			<strong><?= $tterm->name ?></strong>:
+			<?= $tterm->description ?>
+		</div>
+		<?php endif ?>
+		<?php if($audienceterm): ?>
+		<div class="">
+		<?php $home = ''; if(!$gr && !$to && !$dm) $home = 'course/'; ?>
+		<a style="background-color: #FFF; border-radius: 5px; color: #333; display: inline-block; padding: 2px 10px; text-decoration: none;" 
+			href="/learninghub/<?= $home ?><?= $gr ?><?= $to ?><?= $dm ?>">
+				<span style="background-color: #003366; border-radius: 3px; color: #FFF; display: inline-block; font-size: 12px; padding: 0 4px;">Remove</span> 
+			</a>
+			<strong><?= $aterm->name ?></strong>:
+			<?= $aterm->description ?>
+		</div>
+		<?php endif ?>
+		<?php if($dmterm): ?>
+		<div class="">
+		<?php $home = ''; if(!$gr && !$to && !$aud) $home = 'course/'; ?>
+		<a style="background-color: #FFF; border-radius: 5px; color: #333; display: inline-block; padding: 2px 10px; text-decoration: none;" 
+			href="/learninghub/<?= $home ?><?= $gr ?><?= $to ?><?= $aud ?>">
+				<span style="background-color: #003366; border-radius: 3px; color: #FFF; display: inline-block; font-size: 12px; padding: 0 4px;">Remove</span> 
+			</a>
+			<strong><?= $dterm->name ?></strong>:
+			<?= $dterm->description ?>
+		</div>
+		<?php endif ?>
+		</div>
 	</div>
-	
-	<h1><?php echo $term->name ?></h1>
-		<?php //the_archive_title( '<h1 class="page-title">', '</h1>' ); ?>
-		<?php if ( $description ) : ?>
-			<div class="archive-description"><?php echo wp_kses_post( wpautop( $description ) ); ?></div>
-		<?php endif; ?>
-<div class="" style="margin: 1em 0 0 0;">
-<?php 
-// Get a list of all sub-categories and output them as simple links
-$catlist = get_categories(
-						array(
-							'taxonomy' => 'topics',
-							'child_of' => $term->term_id,
-							'orderby' => 'id',
-							'order' => 'DESC',
-							'hide_empty' => '0'
-						));
-
-foreach($catlist as $childcat) {
-	echo '<a href="/learninghub/course_category/'. $childcat->slug . '">' . $childcat->name . '</a> | ';
-}
-
-//print_r($catlist);
-?>
-</div>
-</div>
-</div>
-	</header><!-- .page-header -->
-<div class="alignwide">
-<div class="entry-content">
-	<div id="courselist">
-    <div class="searchbox" style="margin-top: 1em">
-    <input class="search form-control mb-3" placeholder="Type to filter courses">
-	</div>
-	<div class="list">
+	<?php if( $post_my_query->have_posts() ) : ?>
+		<div><?= $post_my_query->found_posts ?> courses</div>
 	<?php while ($post_my_query->have_posts()) : $post_my_query->the_post(); ?>
-		
 		<?php get_template_part( 'template-parts/course/single-course' ) ?>
 	<?php endwhile; ?>
-</div> <!-- /.list -->
-</div> <!-- /#courselist -->
-</div>
-</div>
-<div style="clear: both">
-	<?php twenty_twenty_one_the_posts_navigation(); ?>
-</div>
-<?php else : ?>
-	<?php get_template_part( 'template-parts/content/content-none' ); ?>
-<?php endif; ?>
+	<?php else : ?>
+		<p>Oh no! There are no courses that match your filters.</p>
+	<?php //get_template_part( 'template-parts/content/content-none' ); ?>
+	<?php endif; ?>
 
-<script src="//cdnjs.cloudflare.com/ajax/libs/list.js/2.3.1/list.min.js"></script>
-<script>
+	</div>
+	</div>
 
-var courseoptions = {
-    valueNames: [ 'coursename', 'coursedesc', 'coursecats', 'coursekeys' ]
-};
-var courses = new List('courselist', courseoptions);
-document.getElementById('coursecount').innerHTML = courses.update().matchingItems.length;
-courses.on('searchComplete', function(){
-    //console.log(upcomingClasses.update().matchingItems.length);
-    //console.log(courses.update().matchingItems.length);
-    document.getElementById('coursecount').innerHTML = courses.update().matchingItems.length;
-});
 
-</script>
+
 <?php get_footer(); ?>
