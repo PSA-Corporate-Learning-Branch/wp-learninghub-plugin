@@ -305,9 +305,41 @@ function my_taxonomies_course_audience() {
 }
 
 /** 
+ * Course journeys
+ */
+function my_taxonomies_course_journey() {
+    $labels = array(
+        'name'              => _x( 'Journeys', 'taxonomy general name' ),
+        'singular_name'     => _x( 'Journey', 'taxonomy singular name' ),
+        'search_items'      => __( 'Search Journeys' ),
+        'all_items'         => __( 'All Journeys' ),
+        'parent_item'       => __( 'Parent Journey' ),
+        'parent_item_colon' => __( 'Parent Journey' ),
+        'edit_item'         => __( 'Edit Journey' ), 
+        'update_item'       => __( 'Update Journey' ),
+        'add_new_item'      => __( 'Add New Journey' ),
+        'new_item_name'     => __( 'New Journey' ),
+        'menu_name'         => __( 'Journeys' ),
+    );
+    $args = array(
+        'labels' => $labels,
+        'hierarchical' => true,
+        'show_in_rest' => true,
+        'capabilities' => array(
+          'manage_terms' => 'edit_posts',
+          'edit_terms' => 'manage_options',
+          'delete_terms' => 'manage_options',
+          'assign_terms' => 'edit_posts'
+        ),
+    );
+    register_taxonomy( 'journey', 'course', $args );
+}
+
+/** 
  * Now let's initiate all of those awesome taxonomies!
  */
 
+add_action( 'init', 'my_taxonomies_course_journey', 0 );
 add_action( 'init', 'my_taxonomies_course_audience', 0 );
 add_action( 'init', 'my_taxonomies_course_groups', 0 );
 add_action( 'init', 'my_taxonomies_course_topics', 0 );
@@ -408,6 +440,9 @@ function course_tax_template( $tax_template ) {
   }
   if ( is_tax ( 'external_system' ) ) {
     $tax_template = dirname( __FILE__ ) . '/taxonomy-external_system.php';
+  }
+  if ( is_tax ( 'journey' ) ) {
+    $tax_template = dirname( __FILE__ ) . '/taxonomy-journey.php';
   }
   return $tax_template;
 }
