@@ -547,7 +547,7 @@ function course_elm_sync () {
   $f = file_get_contents('https://learn.bcpublicservice.gov.bc.ca/learning-hub/learning-partner-courses.json');
   $feed = json_decode($f);
   
-  // Create a simple index of course names that are in the feed
+  // Create a hashmap of course IDs that are in the feed
   // so that we can easily use in_array to compare against while
   // we loop through all the published courses.
   $feedindex = [];
@@ -564,7 +564,11 @@ function course_elm_sync () {
   // and updating anything that needs updating e.g., add/remove keywords/topics.
   // 
   // If there isn't a match, then the course isn't in the feed and needs to 
-  // be made private.
+  // be made private if it doesn't have the "Concurrent" keyword applied to it.
+  // If it does have "Concurrent" keyword, then we add "tbscheduled" as a keyword
+  // so that we can filter them out of the search results while keeping them public
+  // with additional messaging that 
+  // "this course may not have any current offerings but check back soon..."
   //
   // This loop through published courses only covers updates to exisiting 
   // courses and marking private (removing) courses that aren't in the feed.
@@ -596,12 +600,12 @@ function course_elm_sync () {
   // Loop though all the PSALS courses in the system.
   foreach ($courses as $course) {
     
-      // Start by adding all the course titles to the courseindex array so that
+      // Start by adding all the course IDs to the courseindex array so that
       // after this loop runs through, we can loop through the feed again
       // and find the courses that are new and need to be created from scratch.
       array_push($courseindex, $course->elm_course_id);
 
-      // Does the course title match a title that's in the feed?
+      // Does the course ID match an ID that's in the feed?
       if(in_array($course->elm_course_id, $feedindex)) {
 
           // Get the details for the feedcourse so we can compare
@@ -757,12 +761,31 @@ function course_elm_sync () {
               wp_set_object_terms( $course->ID, sanitize_text_field($feedcourse->delivery_method), 'delivery_method', false);
           }
 
-      } else { // Does the course title match a title that's in the feed?
+      } else { // The course ID doesn't match an ID that's in the feed:
 
-          // This course is not in the feed anymore.
-          // Make it PRIVATE.
-          $course->post_status = 'private';
-          wp_update_post( $course );
+        // First check to see if this course has a "Recurrent" keyword applied.
+        // If it is recurrent we don't want to make it private as it is just
+        // in between scheduled offerings.
+        // If it is recurrent, simply add "tbscheduled" as a keyword and this
+        // way we can filter them out of normal search results but still present
+        // them as existing.
+
+        //$coursekeys = get_the_terms($course->ID,'keywords');
+        // We already got $coursekeys above so we just reuse that right?
+        if(!empty($coursekeys)) {
+          foreach($coursekeys as $ck) {
+            if($ck->name == 'Recurrent') {
+              // add "tbscheduled" so that we can filter them out
+
+            }
+          }
+        }
+        //... insert code here
+
+
+        // If it's not recurrent and it's not in the feed anymore, make it PRIVATE.
+        $course->post_status = 'private';
+        wp_update_post( $course );
 
       }
   } // endforeach ($courses as $course)
@@ -1114,12 +1137,15 @@ function expired_courses () {
     foreach ($courses as $course) {
 
       // Does the course have a expiration date set?
-      if( in_array( 'course_expire', get_post_custom_keys( $course->ID ) ) ) {
+      $cuskeys = get_post_custom_keys( $course->ID );
+      if(is_array($cuskeys)) {
+        if( in_array( 'course_expire', $cuskeys ) ) {
 
-        if($today > $course->course_expire) {
-          
-          $course->post_status = 'private';
-          wp_update_post( $course );
+          if($today > $course->course_expire) {
+            
+            $course->post_status = 'private';
+            wp_update_post( $course );
+          }
         }
       }
     }
@@ -1127,10 +1153,10 @@ function expired_courses () {
 }
 
 
-
-if ( ! wp_next_scheduled( 'twicedaily_schedule_hook' ) ) {
-  wp_schedule_event( time(), 'twicedaily', 'course_elm_sync' );
-}
+add_action("init", "remove_cron_job"); 
+function remove_cron_job() {
+  wp_clear_scheduled_hook("course_elm_sync"); 
+} 
 
 
 
@@ -1276,17 +1302,6 @@ function course_save_course_expire_meta ( $post_id, $post ) {
 
 
 
-function hub_add_rewrite_rules() {
-  global $wp_rewrite;
-  $new_rules = array(
-      '(groups|topics|audience|delivery_method)/(.+?)/(groups|topics|audience|delivery_method)/(.+?)/(groups|topics|audience|delivery_method)/(.+?)/(groups|topics|audience|delivery_method)/(.+?)/?$' => 'index.php?' . $wp_rewrite->preg_index(1) . '=' . $wp_rewrite->preg_index(2) . '&' . $wp_rewrite->preg_index(3) . '=' . $wp_rewrite->preg_index(4) . '&' . $wp_rewrite->preg_index(5) . '=' . $wp_rewrite->preg_index(6) . '&' . $wp_rewrite->preg_index(7) . '=' . $wp_rewrite->preg_index(8),
-      '(groups|topics|audience|delivery_method)/(.+?)/(groups|topics|audience|delivery_method)/(.+?)/(groups|topics|audience|delivery_method)/(.+?)/?$' => 'index.php?' . $wp_rewrite->preg_index(1) . '=' . $wp_rewrite->preg_index(2) . '&' . $wp_rewrite->preg_index(3) . '=' . $wp_rewrite->preg_index(4) . '&' . $wp_rewrite->preg_index(5) . '=' . $wp_rewrite->preg_index(6),
-      '(groups|topics|audience|delivery_method)/(.+?)/(groups|topics|audience|delivery_method)/(.+?)/?$' => 'index.php?' . $wp_rewrite->preg_index(1) . '=' . $wp_rewrite->preg_index(2) . '&' . $wp_rewrite->preg_index(3) . '=' . $wp_rewrite->preg_index(4),
-      '(groups|topics|audience|delivery_method)/(.+)/?$' => 'index.php?' . $wp_rewrite->preg_index(1) . '=' . $wp_rewrite->preg_index(2)
-  );
-  $wp_rewrite->rules = $new_rules + $wp_rewrite->rules;
-}
-add_action( 'generate_rewrite_rules', 'hub_add_rewrite_rules' );
 
 
 
