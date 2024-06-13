@@ -114,7 +114,7 @@ $dm = ''; if($dmterm) $dm = 'delivery_method/' . $dmterm . '/';
 	<?php foreach($topics as $t): ?>
 		<?php $active = ''; if($t->slug == $topicterm) $active = 'active'; ?>
 		<div style="margin:0;padding:0;">
-			<a class="<?= $active ?>" href="/learninghub/<?= $gr ?>topics/<?= $t->slug ?>/<?= $aud ?><?= $dms ?>">
+			<a class="<?= $active ?>" href="/learninghub/filter/<?= $gr ?>topics/<?= $t->slug ?>/<?= $aud ?><?= $dms ?>">
 				<?= $t->name ?>
 			</a>
 			(<?= $t->count ?>)
@@ -134,7 +134,7 @@ $dm = ''; if($dmterm) $dm = 'delivery_method/' . $dmterm . '/';
 	<?php foreach($audiences as $a): ?>
 		<?php $active = ''; if($a->slug == $audienceterm) $active = 'active'; ?>
 		<div style="margin:0;padding:0;">
-			<a class="<?= $active ?>" href="/learninghub/<?= $gr ?><?= $to ?>audience/<?= $a->slug ?>/<?= $dms ?>">
+			<a class="<?= $active ?>" href="/learninghub/filter/<?= $gr ?><?= $to ?>audience/<?= $a->slug ?>/<?= $dms ?>">
 				<?= $a->name ?>
 			</a>
 			(<?= $a->count ?>)
@@ -154,7 +154,7 @@ $dm = ''; if($dmterm) $dm = 'delivery_method/' . $dmterm . '/';
 	<?php foreach($dms as $d): ?>
 		<?php $active = ''; if($d->slug == $dmterm) $active = 'active'; ?>
 		<div style="margin:0;padding:0;">
-			<a class="<?= $active ?>" href="/learninghub/<?= $gr ?><?= $to ?><?= $aud ?>delivery_method/<?= $d->slug ?>">
+			<a class="<?= $active ?>" href="/learninghub/filter/<?= $gr ?><?= $to ?><?= $aud ?>delivery_method/<?= $d->slug ?>">
 				<?= $d->name ?>
 			</a>
 			(<?= $d->count ?>)
@@ -171,44 +171,41 @@ $dm = ''; if($dmterm) $dm = 'delivery_method/' . $dmterm . '/';
 		<div class="">
 		<?php $home = ''; if(!$to && !$aud && !$dm) $home = 'course/'; ?>
 			<a style="background-color: #FFF; border-radius: 5px; color: #333; display: inline-block; padding: 2px 10px; text-decoration: none;" 
-				href="/learninghub/<?= $home ?><?= $to ?><?= $aud ?><?= $dm ?>">
+				href="/learninghub/filter/<?= $home ?><?= $to ?><?= $aud ?><?= $dm ?>">
 					<span style="background-color: #003366; border-radius: 3px; color: #FFF; display: inline-block; font-size: 12px; padding: 0 4px;">Remove</span> 
 			</a>
-			<strong><?= $gterm->name ?></strong>: 
-			<?= $gterm->description ?>
+			<strong><?= $gterm->name ?></strong>
+			
 		</div>
 		<?php endif ?>
 		<?php if($topicterm): ?>
 		<div class="">
 		<?php $home = ''; if(!$gr && !$aud && !$dm) $home = 'course/'; ?>
 		<a style="background-color: #FFF; border-radius: 5px; color: #333; display: inline-block; padding: 2px 10px; text-decoration: none;" 
-			href="/learninghub/<?= $home ?><?= $gr ?><?= $aud ?><?= $dm ?>">
+			href="/learninghub/filter/<?= $home ?><?= $gr ?><?= $aud ?><?= $dm ?>">
 				<span style="hover:background-color: #145693; background-color: #003366; border-radius: 3px; color: #FFF; display: inline-block; font-size: 12px; padding: 0 4px;">Remove</span> 
 			</a>
-			<strong><?= $tterm->name ?></strong>:
-			<?= $tterm->description ?>
+			<strong><?= $tterm->name ?></strong>
 		</div>
 		<?php endif ?>
 		<?php if($audienceterm): ?>
 		<div class="">
 		<?php $home = ''; if(!$gr && !$to && !$dm) $home = 'course/'; ?>
 		<a style="background-color: #FFF; border-radius: 5px; color: #333; display: inline-block; padding: 2px 10px; text-decoration: none;" 
-			href="/learninghub/<?= $home ?><?= $gr ?><?= $to ?><?= $dm ?>">
+			href="/learninghub/filter/<?= $home ?><?= $gr ?><?= $to ?><?= $dm ?>">
 				<span style="background-color: #003366; border-radius: 3px; color: #FFF; display: inline-block; font-size: 12px; padding: 0 4px;">Remove</span> 
 			</a>
-			<strong><?= $aterm->name ?></strong>:
-			<?= $aterm->description ?>
+			<strong><?= $aterm->name ?></strong>
 		</div>
 		<?php endif ?>
 		<?php if($dmterm): ?>
 		<div class="">
 		<?php $home = ''; if(!$gr && !$to && !$aud) $home = 'course/'; ?>
 		<a style="background-color: #FFF; border-radius: 5px; color: #333; display: inline-block; padding: 2px 10px; text-decoration: none;" 
-			href="/learninghub/<?= $home ?><?= $gr ?><?= $to ?><?= $aud ?>">
+			href="/learninghub/filter/<?= $home ?><?= $gr ?><?= $to ?><?= $aud ?>">
 				<span style="background-color: #003366; border-radius: 3px; color: #FFF; display: inline-block; font-size: 12px; padding: 0 4px;">Remove</span> 
 			</a>
-			<strong><?= $dterm->name ?></strong>:
-			<?= $dterm->description ?>
+			<strong><?= $dterm->name ?></strong>
 		</div>
 		<?php endif ?>
 		</div>
