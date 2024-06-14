@@ -34,7 +34,7 @@ while ( have_posts() ) :
 	<?php foreach($groups as $g): ?>
 		<?php $active = ''; if($g->slug == $groupterm) $active = 'active'; ?>
 		<div style="margin:0;padding:0;">
-			<a class="<?= $active ?>" href="/learninghub/groups/<?= $g->slug ?>/<?= $to ?><?= $aud ?><?= $dms ?>">
+			<a class="<?= $active ?>" href="/learninghub/filter/?group[]=<?= $g->slug ?>">
 				<?= $g->name ?>
 			</a>
 			(<?= $g->count ?>)
@@ -54,7 +54,7 @@ while ( have_posts() ) :
 	<?php foreach($topics as $t): ?>
 		<?php $active = ''; if($t->slug == $topicterm) $active = 'active'; ?>
 		<div style="margin:0;padding:0;">
-			<a class="<?= $active ?>" href="/learninghub/<?= $gr ?>topics/<?= $t->slug ?>/<?= $aud ?><?= $dms ?>">
+			<a class="<?= $active ?>" href="/learninghub/filter/?topic[]=<?= $t->slug ?>">
 				<?= $t->name ?>
 			</a>
 			(<?= $t->count ?>)
@@ -74,7 +74,7 @@ while ( have_posts() ) :
 	<?php foreach($audiences as $a): ?>
 		<?php $active = ''; if($a->slug == $audienceterm) $active = 'active'; ?>
 		<div style="margin:0;padding:0;">
-			<a class="<?= $active ?>" href="/learninghub/<?= $gr ?><?= $to ?>audience/<?= $a->slug ?>/<?= $dms ?>">
+			<a class="<?= $active ?>" href="/learninghub/filter/?audience[]=<?= $a->slug ?>">
 				<?= $a->name ?>
 			</a>
 			(<?= $a->count ?>)
@@ -94,7 +94,7 @@ while ( have_posts() ) :
 	<?php foreach($dms as $d): ?>
 		<?php $active = ''; if($d->slug == $dmterm) $active = 'active'; ?>
 		<div style="margin:0;padding:0;">
-			<a class="<?= $active ?>" href="/learninghub/<?= $gr ?><?= $to ?><?= $aud ?>delivery_method/<?= $d->slug ?>">
+			<a class="<?= $active ?>" href="/learninghub/filter/?delivery_method[]=<?= $d->slug ?>">
 				<?= $d->name ?>
 			</a>
 			(<?= $d->count ?>)
