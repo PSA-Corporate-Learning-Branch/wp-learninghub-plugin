@@ -386,43 +386,9 @@ function lzone_search_where($where){
   add_filter('posts_groupby', 'lzone_search_groupby');
 
 
-
-/**
- * Now let's make sure that we're using our own customized template
- * so that courses can show the meta data in a customizable fashion.
- *  
- * #TODO extend this to include archive.php for main index page
- * and also taxonomy pages
- * 
- */
-function load_course_template( $template ) {
-    global $post;
-    if ( 'course' === $post->post_type && locate_template( array( 'single-course.php' ) ) !== $template ) {
-        /*
-         * This is a 'course' page
-         * AND a 'single course template' is not found on
-         * theme or child theme directories, so load it
-         * from our plugin directory.
-         */
-        return plugin_dir_path( __FILE__ ) . 'single-course.php';
-    }
-    return $template;
-}
-
-function course_archive_template( $archive_template ) {
-     global $post;
-     if ( is_post_type_archive ( 'course' ) ) {
-          $archive_template = dirname( __FILE__ ) . '/archive-course.php';
-     }
-     return $archive_template;
-}
-
 function course_tax_template( $tax_template ) {
   global $post;
   $tax_template = dirname( __FILE__ ) . '/taxonomy.php';
-  // if ( is_tax ( 'course_category' ) ) {
-  //   $tax_template = dirname( __FILE__ ) . '/taxonomy.php';
-  // }
   if ( is_tax ( 'learning_partner' ) ) {
     $tax_template = dirname( __FILE__ ) . '/taxonomy-learning_partner.php';
   }
@@ -441,15 +407,11 @@ function course_tax_template( $tax_template ) {
   if ( is_tax ( 'external_system' ) ) {
     $tax_template = dirname( __FILE__ ) . '/taxonomy-external_system.php';
   }
-  if ( is_tax ( 'journey' ) ) {
-    $tax_template = dirname( __FILE__ ) . '/taxonomy-journey.php';
-  }
   return $tax_template;
 }
 
-add_filter( 'single_template', 'load_course_template' );
-add_filter( 'archive_template', 'course_archive_template');
 add_filter( 'taxonomy_template', 'course_tax_template');
+
 
 function course_menu() {
 	add_submenu_page(
@@ -1151,13 +1113,6 @@ function expired_courses () {
     }
     header('Location: /learninghub/wp-admin/edit.php?post_type=course');
 }
-
-
-add_action("init", "remove_cron_job"); 
-function remove_cron_job() {
-  wp_clear_scheduled_hook("course_elm_sync"); 
-} 
-
 
 
 /* Fire our meta box setup function on the post editor screen. */
