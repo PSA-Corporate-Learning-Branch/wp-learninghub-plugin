@@ -396,16 +396,16 @@ function course_tax_template( $tax_template ) {
     $tax_template = get_stylesheet_directory() . '/taxonomy-external_system.php';
   }
   if ( is_tax ( 'audience' ) ) {
-    $tax_template = dirname( __FILE__ ) . '/taxonomy.php';
+    $tax_template = get_stylesheet_directory() . '/taxonomy.php';
   }
   if ( is_tax ( 'groups' ) ) {
-    $tax_template = dirname( __FILE__ ) . '/taxonomy.php';
+    $tax_template = get_stylesheet_directory() . '/taxonomy.php';
   }
   if ( is_tax ( 'topics' ) ) {
-    $tax_template = dirname( __FILE__ ) . '/taxonomy.php';
+    $tax_template = get_stylesheet_directory() . '/taxonomy.php';
   }
   if ( is_tax ( 'delivery_method' ) ) {
-    $tax_template = dirname( __FILE__ ) . '/taxonomy.php';
+    $tax_template = get_stylesheet_directory() . '/taxonomy.php';
   }
   return $tax_template;
 }
