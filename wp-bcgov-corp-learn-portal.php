@@ -390,7 +390,10 @@ function course_tax_template( $tax_template ) {
   global $post;
   $tax_template = dirname( __FILE__ ) . '/taxonomy.php';
   if ( is_tax ( 'learning_partner' ) ) {
-    $tax_template = dirname( __FILE__ ) . '/taxonomy-learning_partner.php';
+    $tax_template = get_stylesheet_directory() . '/taxonomy-learning_partner.php';
+  }
+  if ( is_tax ( 'external_system' ) ) {
+    $tax_template = get_stylesheet_directory() . '/taxonomy-external_system.php';
   }
   if ( is_tax ( 'audience' ) ) {
     $tax_template = dirname( __FILE__ ) . '/taxonomy.php';
@@ -403,9 +406,6 @@ function course_tax_template( $tax_template ) {
   }
   if ( is_tax ( 'delivery_method' ) ) {
     $tax_template = dirname( __FILE__ ) . '/taxonomy.php';
-  }
-  if ( is_tax ( 'external_system' ) ) {
-    $tax_template = dirname( __FILE__ ) . '/taxonomy-external_system.php';
   }
   return $tax_template;
 }
