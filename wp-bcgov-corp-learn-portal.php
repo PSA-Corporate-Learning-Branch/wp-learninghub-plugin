@@ -1200,7 +1200,7 @@ function course_save_course_link_meta ( $post_id, $post ) {
     return $post_id;
 
     /* Get the posted data */
-    $new_meta_value = ( isset( $_POST['course-link'] ) ? $_POST['course-link'] : ’ );
+    $new_meta_value = ( isset( $_POST['course-link'] ) ? $_POST['course-link'] : '' );
 
     /* Get the meta key. */
     $meta_key = 'course_link';
@@ -1234,7 +1234,7 @@ function course_save_course_expire_meta ( $post_id, $post ) {
   return $post_id;
 
   /* Get the posted data */
-  $new_meta_value = ( isset( $_POST['course-expire'] ) ? $_POST['course-expire'] : ’ );
+  $new_meta_value = ( isset( $_POST['course-expire'] ) ? $_POST['course-expire'] : '' );
 
   /* Get the meta key. */
   $meta_key = 'course_expire';
