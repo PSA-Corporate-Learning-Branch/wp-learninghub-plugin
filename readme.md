@@ -14,27 +14,24 @@ with it:
 - External Systems
 - Keywords
 
-Enable custom fields to capture:
+Enable custom meta boxes to easily manage:
 
 - Registration link
 - ELM course code
 - ELM course ID
 - Expiry date
 
-Create custom meta boxes to better manage the UI for admin folx.
-
-We provide page templates for the course type, both single view and main archives, 
-though we are also using a custom child-theme where these files might live in 
-the future.
+This plugin depends on [the custom theme](https://github.com/bcgov/wp-learninghub) that was created
+to support it. All template files reside there.
 
 There are numerous helper functions to add support for extended searching into the 
 taxonomies and adding fields to taxonomies such as learning partner contact info and
 organizational logo.
 
-There is also system-specific synchronization methods, including the 
+There are also system-specific synchronization methods, including the 
 PSA Learning System (ELM) and the Learning Curator.
 
-Version 2 Release Notes:
+### Version 2 Release Notes:
 
 - sync completely re-written to only touch database when it needs to.
     - sync now based on course ID and not name.
