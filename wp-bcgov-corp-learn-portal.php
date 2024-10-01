@@ -243,36 +243,7 @@ function my_taxonomies_course_topics() {
     );
     register_taxonomy( 'topics', 'course', $args );
 }
-/** 
- * Course groups aligning with Corporate Learning Framework
- */
-function my_taxonomies_course_groups() {
-    $labels = array(
-        'name'              => _x( 'Groups', 'taxonomy general name' ),
-        'singular_name'     => _x( 'Group', 'taxonomy singular name' ),
-        'search_items'      => __( 'Search Groups' ),
-        'all_items'         => __( 'All Groups' ),
-        'parent_item'       => __( 'Parent Group' ),
-        'parent_item_colon' => __( 'Parent Group' ),
-        'edit_item'         => __( 'Edit Group' ), 
-        'update_item'       => __( 'Update Group' ),
-        'add_new_item'      => __( 'Add New Group' ),
-        'new_item_name'     => __( 'New Group' ),
-        'menu_name'         => __( 'Groups' ),
-    );
-    $args = array(
-        'labels' => $labels,
-        'hierarchical' => true,
-        'show_in_rest' => true,
-        'capabilities' => array(
-          'manage_terms' => 'edit_posts',
-          'edit_terms' => 'manage_options',
-          'delete_terms' => 'manage_options',
-          'assign_terms' => 'edit_posts'
-        ),
-    );
-    register_taxonomy( 'groups', 'course', $args );
-}
+
 /** 
  * Course audience aligning with Corporate Learning Framework
  */
@@ -341,7 +312,7 @@ function my_taxonomies_course_journey() {
 
 add_action( 'init', 'my_taxonomies_course_journey', 0 );
 add_action( 'init', 'my_taxonomies_course_audience', 0 );
-add_action( 'init', 'my_taxonomies_course_groups', 0 );
+
 add_action( 'init', 'my_taxonomies_course_topics', 0 );
 // add_action( 'init', 'my_taxonomies_course_category', 0 );
 add_action( 'init', 'my_taxonomies_course_delivery_method', 0 );
@@ -396,9 +367,6 @@ function course_tax_template( $tax_template ) {
     $tax_template = get_stylesheet_directory() . '/taxonomy-external_system.php';
   }
   if ( is_tax ( 'audience' ) ) {
-    $tax_template = get_stylesheet_directory() . '/taxonomy.php';
-  }
-  if ( is_tax ( 'groups' ) ) {
     $tax_template = get_stylesheet_directory() . '/taxonomy.php';
   }
   if ( is_tax ( 'topics' ) ) {
@@ -612,6 +580,7 @@ function course_elm_sync () {
           if($courseupdated) {
             wp_update_post($course);
           }
+          
 
           // The link directly to the course page on the external system.
           if($feedcourse->url != $course->course_link) {
@@ -627,6 +596,16 @@ function course_elm_sync () {
           // if($feedcourse->_course_id != $course->elm_course_id) {
           //   update_post_meta( $course->ID, 'elm_course_id', $feedcourse->_course_id );
           // }
+          
+          // Check if 'elm_date_published' is different and update if necessary
+          if($feedcourse->date_published != get_post_meta($course->ID, 'elm_date_published', true)) {
+            update_post_meta($course->ID, 'elm_date_published', $feedcourse->date_published);
+          }
+
+          // Check if 'elm_date_modified' is different and update if necessary
+          if($feedcourse->date_modified != get_post_meta($course->ID, 'elm_date_modified', true)) {
+            update_post_meta($course->ID, 'elm_date_modified', $feedcourse->date_modified);
+          }
 
 
 
@@ -687,14 +666,6 @@ function course_elm_sync () {
             }
           }
 
-          $group = get_the_terms($course->ID,'groups');
-          // There's only ever one 
-          if(!empty($feedcourse->_group)) {
-            if($group[0]->name != $feedcourse->_group) {
-              wp_set_object_terms( $course->ID, sanitize_text_field($feedcourse->_group), 'groups', false);
-            }
-          }
-          
           $audience = get_the_terms($course->ID,'audience');
           // There's only ever one 
           if(!empty($feedcourse->_audience)) {
@@ -761,6 +732,27 @@ function course_elm_sync () {
     if(!empty($feedcourse->_course_id)) {
       if(!in_array($feedcourse->_course_id, $courseindex) && !empty($feedcourse->title)) {
 
+          /**
+           * id	"ITEM-1676"
+           * title	"Addressing Discriminatio…ssment in the Workplace"
+           * summary	"This 30-min online train…loyees and supervisors."
+           * content_text	"Addressing Discriminatio…ssment in the Workplace"
+           * content_html	"<h1>Addressing Discrimin…t in the Workplace</h1>"
+           * delivery_method	"eLearning"
+           * _available_classes	"1"
+           * _course_id	"18933"
+           * _keywords	"Workplace Health and Saf…reconciliation, village"
+           * _audience	"All Employees"
+           * _group	"Core"
+           * _topic	"Respectful Workplaces"
+           * _learning_partner	"Workplace Health and Safety"
+           * author	"Workplace Health and Safety"
+           * date_published	"2020-05-13T14:00:00"
+           * date_modified	"2024-09-17T14:45:57"
+           * tags	"Respectful Workplaces, Core, All Employees"
+           * url	"https://learning.gov.bc.…eSearch=Y&LM_CI_ID=18933"
+           * 
+           */
           // This course isn't in the list of published courses
           // so it is new, so we need to create this course from scratch.
           // Set up the new course with basic settings in place
@@ -773,7 +765,9 @@ function course_elm_sync () {
               'meta_input'   => array(
                   'course_link' => esc_url_raw($feedcourse->url),
                   'elm_course_code' => $feedcourse->id,
-                  'elm_course_id' => $feedcourse->_course_id
+                  'elm_course_id' => $feedcourse->_course_id,
+                  'elm_date_published' => $feedcourse->date_published,
+                  'elm_date_modified' => $feedcourse->date_modified
               )
           );
           // Actually create the new post so that we can move on 
@@ -782,16 +776,16 @@ function course_elm_sync () {
 
           wp_set_object_terms( $post_id, sanitize_text_field($feedcourse->delivery_method), 'delivery_method', false);
           wp_set_object_terms( $post_id, sanitize_text_field($feedcourse->_learning_partner), 'learning_partner', false);
+          wp_set_object_terms( $post_id, sanitize_text_field($feedcourse->_topic), 'topics', true);
+          wp_set_object_terms( $post_id, sanitize_text_field($feedcourse->_audience), 'audience', true);
           wp_set_object_terms( $post_id, 'PSA Learning System', 'external_system', false);
 
           if(!empty($feedcourse->_keywords)) {
             $keywords = explode(',', $feedcourse->_keywords);
             wp_set_object_terms( $post_id, $keywords, 'keywords', true);
           }
-          if(!empty($feedcourse->tags)) {
-            $topics = explode(',', $feedcourse->tags);
-            wp_set_object_terms( $post_id, $topics, 'topics', true);
-          }
+
+
 
           // $to = 'allan.haggett@gov.bc.ca';
           // $subject = 'LearningHUB new course:' . $feedcourse->title;
@@ -1051,7 +1045,6 @@ function curator_sync () {
           wp_set_object_terms( $post_id, 'Curated Pathway', 'delivery_method', false);
           // wp_set_object_terms( $post_id, sanitize_text_field($feedcourse->_learning_partner), 'learning_partner', false);
           wp_set_object_terms( $post_id, sanitize_text_field($feedcourse->topic->name), 'topics', false);
-          wp_set_object_terms( $post_id, 'Complementary', 'groups', false);
           wp_set_object_terms( $post_id, 'Learning Centre', 'learning_partner', false);
           wp_set_object_terms( $post_id, 'PSA Learning Curator', 'external_system', false);
           if(!empty($feedcourse->keywords)) {
