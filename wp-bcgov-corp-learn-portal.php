@@ -929,7 +929,7 @@ function curator_sync () {
               update_post_meta( $course->ID, 'course_link', $fcurl );
           }
 
-
+          wp_set_object_terms( $course->ID, 'All Employees', 'audience', false);
           // Get the keywords for this course from the feed.
           $feedkeys = explode(',', $feedcourse->keywords);
           // Load up the categories currently associated with the course.
@@ -1045,6 +1045,7 @@ function curator_sync () {
           wp_set_object_terms( $post_id, 'Curated Pathway', 'delivery_method', false);
           // wp_set_object_terms( $post_id, sanitize_text_field($feedcourse->_learning_partner), 'learning_partner', false);
           wp_set_object_terms( $post_id, sanitize_text_field($feedcourse->topic->name), 'topics', false);
+          wp_set_object_terms( $post_id, 'All Employees', 'audience', false);
           wp_set_object_terms( $post_id, 'Learning Centre', 'learning_partner', false);
           wp_set_object_terms( $post_id, 'PSA Learning Curator', 'external_system', false);
           if(!empty($feedcourse->keywords)) {
