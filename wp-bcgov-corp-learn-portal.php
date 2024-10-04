@@ -323,38 +323,38 @@ add_action( 'init', 'my_taxonomies_system', 0 );
 
 
 // search all taxonomies, based on: http://projects.jesseheap.com/all-projects/wordpress-plugin-tag-search-in-wordpress-23
+function lzone_custom_search( $search, $query ) {
+  global $wpdb;
 
-function lzone_search_where($where){
-    global $wpdb;
-    if (is_search())
-      $where .= "OR (t.name LIKE '%".get_search_query()."%' AND {$wpdb->posts}.post_status = 'publish')";
-    return $where;
+  if ( ( $query->is_search() || $query->get('custom_search') ) && ! empty( $query->get('s') ) ) {
+      // Sanitize the search term
+      $search_term = esc_sql( $query->get('s') );
+
+      // Build the search SQL
+      $search = " AND (";
+      $search .= "{$wpdb->posts}.post_title LIKE '%{$search_term}%'";
+      $search .= " OR {$wpdb->posts}.post_content LIKE '%{$search_term}%'";
+      $search .= " OR EXISTS (
+          SELECT 1 FROM {$wpdb->term_relationships} tr
+          INNER JOIN {$wpdb->term_taxonomy} tt ON tr.term_taxonomy_id = tt.term_taxonomy_id
+          INNER JOIN {$wpdb->terms} t ON tt.term_id = t.term_id
+          WHERE tr.object_id = {$wpdb->posts}.ID
+          AND t.name LIKE '%{$search_term}%'
+      )";
+      $search .= " )";
   }
-  
-  function lzone_search_join($join){
-    global $wpdb;
-    if (is_search())
-      $join .= "LEFT JOIN {$wpdb->term_relationships} tr ON {$wpdb->posts}.ID = tr.object_id INNER JOIN {$wpdb->term_taxonomy} tt ON tt.term_taxonomy_id=tr.term_taxonomy_id INNER JOIN {$wpdb->terms} t ON t.term_id = tt.term_id";
-    return $join;
-  }
-  
-  function lzone_search_groupby($groupby){
-    global $wpdb;
-  
-    // we need to group on post ID
-    $groupby_id = "{$wpdb->posts}.ID";
-    if(!is_search() || strpos($groupby, $groupby_id) !== false) return $groupby;
-  
-    // groupby was empty, use ours
-    if(!strlen(trim($groupby))) return $groupby_id;
-  
-    // wasn't empty, append ours
-    return $groupby.", ".$groupby_id;
-  }
-  
-  add_filter('posts_where','lzone_search_where');
-  add_filter('posts_join', 'lzone_search_join');
-  add_filter('posts_groupby', 'lzone_search_groupby');
+
+  return $search;
+}
+add_filter( 'posts_search', 'lzone_custom_search', 10, 2 );
+
+// Add the custom query variable
+function add_custom_query_vars($vars) {
+    $vars[] = 'custom_search';
+    return $vars;
+}
+add_filter('query_vars', 'add_custom_query_vars');
+
 
 
 function course_tax_template( $tax_template ) {
