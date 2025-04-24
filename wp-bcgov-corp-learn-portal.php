@@ -517,7 +517,7 @@ function sync_courses_with_feed($feed) {
   foreach ($feed->items as $feedcourse) {
       if (!empty($feedcourse->_course_id) && !array_key_exists((int) $feedcourse->_course_id, $courseindex)) {
           // Set external_system from the feed record
-          $external_system = !empty($feedcourse->_external_system) ? sanitize_text_field($feedcourse->_external_system) : 'default-system';
+          $external_system = !empty($feedcourse->_platform) ? sanitize_text_field($feedcourse->_platform) : 'default-system';
 
           // Create the new course
           $new_course = array(
@@ -565,7 +565,7 @@ function sync_courses_with_feed($feed) {
       }
 
       $feedcourse = $feed_map[$elm_course_id];
-      $external_system = !empty($feedcourse->_external_system) ? sanitize_text_field($feedcourse->_external_system) : 'default-system'; // Set external system from the feed record
+      $external_system = !empty($feedcourse->_platform) ? sanitize_text_field($feedcourse->_platform) : 'default-system'; // Set external system from the feed record
       $courseupdated = false;
 
       // Compare and update post details
