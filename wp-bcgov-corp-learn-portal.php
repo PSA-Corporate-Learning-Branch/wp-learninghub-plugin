@@ -406,14 +406,7 @@ function course_menu() {
 		'course_elm_sync',
 		'course_elm_sync'
 	);
-	add_submenu_page(
-		null,
-		null,
-		null,
-		'edit_posts',
-		'curator_sync',
-		'curator_sync'
-	);
+
 	add_submenu_page(
 		null,
 		null,
@@ -438,8 +431,7 @@ function systems_sync() {
 	}
     echo '<h1>External Systems Synchronization</h1>';
     echo '<p>The LearningHUB synchronizes with other systems, currently including the ';
-    echo '<a href="https://learning.gov.bc.ca/CHIPSPLM/signon.html" target="_blank">PSA Learning System</a> and the ';
-    echo '<a href="https://learningcurator.gww.gov.bc.ca/" target="_blank">Learning Curator</a>.</p>';
+    echo '<a href="https://learning.gov.bc.ca/CHIPSPLM/signon.html" target="_blank">PSA Learning System</a>';
     echo '<p>Additionally, running this sync process will examine courses that aren\'t in a sync system which have an ';
     echo 'expiration date set. If the date is older than today, the course is marked private.</p>';
     $psalslink = admin_url('edit.php?noheader=true&post_type=course&page=course_elm_sync');
@@ -450,13 +442,6 @@ function systems_sync() {
     echo '</a>';
     echo '</div>';
 
-    // echo '<div>';
-    // $curatorlink = admin_url('edit.php?noheader=true&post_type=course&page=curator_sync');
-    // echo '<a href="'.$curatorlink.'" ';
-    // echo 'style="background-color: #222; color: #FFF; display: inline-block; padding: .75em 2em;">';
-    // echo 'Start synchronization with Learning Curator';
-    // echo '</a>';
-    // echo '</div>';
 
 }
 
@@ -480,7 +465,7 @@ function course_elm_sync() {
       error_log("Failed to fetch course feed from $endpoint");
   }
 
-  header('Location: edit.php?noheader=true&post_type=course&page=curator_sync');
+  header('Location: edit.php?noheader=true&post_type=course&page=expired_courses');
   // echo 'Done.';
 }
 
@@ -669,260 +654,6 @@ function sync_taxonomy_if_changed($post_id, $taxonomy, $new_terms) {
     }
 }
 
-/**
- * Synchronize with the public feed for the Learning Curator.
- * https://learningcurator.gww.gov.bc.ca/
- * 
- * This is functionally almost identical to the PSALS sync above,
- * but some field-mapping is different and some taxes aren't needed.
- * If we have more than one more system that we want to sync with we 
- * should look to abstracting this into a single method to be DRY.
- */
-function curator_sync () {
-
-  if ( !current_user_can( 'edit_posts' ) )  {
-    wp_die( __( 'You do not have sufficient permissions to access this page.' ) );
-  }
-
-  // Get the feed and parse it into an array.
-  // $f = file_get_contents('https://learningcurator.ca/pathways/jsonfeed');
-  $f = file_get_contents('https://learningcurator.gww.gov.bc.ca/pathways/jsonfeed');
-  $feed = json_decode($f);
-  
-  // Create a simple index of course names that are in the feed
-  // so that we can easily use in_array to compare against while
-  // we loop through all the published courses.
-  $feedindex = [];
-  foreach($feed->pathways as $feedcourse) {
-    array_push($feedindex, trim($feedcourse->id));
-  }
-
-  // Now we can loop through each of the exisiting published courses
-  // and check each against the feedindex array.
-  //
-  // If we find a match, then we can look to getting the info from the feed 
-  // and updating anything that needs updating e.g., add/remove keywords/topics.
-  // 
-  // If there isn't a match, then the course isn't in the feed and needs to 
-  // be made private.
-  //
-  // This loop through published courses only covers updates to exisiting 
-  // courses and marking private (removing) courses that aren't in the feed.
-  // After this loop is complete we do another run through the individual 
-  // courses in the feed to cover adding any new courses that don't exist yet.
-  // 
-
-  //
-  // Start by getting all the courses that are listed as being in the 
-  // PSA Learning Curator, whatever the status (we even want existing private 
-  // courses so that we can simply update and set back to published instead
-  // of creating a whole new one.)
-  //
-  $courses = get_posts(array(
-      'post_type' => 'course',
-      'numberposts' => -1,
-      'post_status'    => 'any',
-      'tax_query' => array(
-          array(
-          'taxonomy' => 'external_system',
-          'field' => 'slug',
-          'terms' => 'psa-learning-curator')
-      ))
-    );
-
-  //
-  // Create the array to array_push the existing course titles into
-  $courseindex = [];
-  // Loop though all the PSALS courses in the system.
-  foreach ($courses as $course) {
-    
-      // Start by adding all the course titles to the courseindex array so that
-      // after this loop runs through, we can loop through the feed again
-      // and find the courses that are new and need to be created from scratch.
-      array_push($courseindex, htmlentities(trim($course->pathway_id)));
-
-      // Does the course title match a title that's in the feed?
-      if(in_array(trim($course->pathway_id), $feedindex)) {
-
-          // Get the details for the feedcourse so we can compare
-          foreach($feed->pathways as $f) {
-              if(trim($f->id) == trim($course->pathway_id)) {
-                $feedcourse = $f;
-              }
-          }
-            // Set a flag to determine if the course has been updated
-          // so that we can not touch the database if we don't need to.
-          $courseupdated = 0;
-          
-          // Compare more throughly for any updates.
-          // If everything is the same then we're not actually touching the 
-          // database at all in this process.
-          if($feedcourse->name != $course->post_title) {
-              // update post title
-              $course->post_title = $feedcourse->name;
-              $courseupdated = 1;
-          }
-          if($feedcourse->objective != $course->post_content) {
-              // update post content
-              $course->post_content = $feedcourse->objective;
-              $course->post_excerpt = $feedcourse->objective;
-              $courseupdated = 1;
-          }
-          
-          // Make sure it's published just in case we're matching against a 
-          // course that is currently private.
-          if($course->post_status == 'private') {
-            $course->post_status = 'publish';
-            // Something changed, so we need to update the database.
-            $courseupdated = 1;
-          }
-
-          // That's it for core details, so let's update the post if we need to.
-          // After this we're updating the taxonomies & meta which happens with 
-          // separate functions.
-          if($courseupdated) {
-            wp_update_post($course);
-          }
-
-
-          $fcurl = 'https://learningcurator.gww.gov.bc.ca/p/' . $feedcourse->slug;
-          if($fcurl != $course->course_link) {
-              update_post_meta( $course->ID, 'course_link', $fcurl );
-          }
-
-          wp_set_object_terms( $course->ID, 'All Employees', 'audience', false);
-          // Get the keywords for this course from the feed.
-          $feedkeys = explode(',', $feedcourse->keywords);
-          // Load up the categories currently associated with the course.
-          $coursekeys = get_the_terms($course->ID,'keywords');
-          if(!empty($feedkeys)) {
-            // Update the course with the feed topics.
-            // Testing if there are new terms and only add new ones. 
-            // Passing an array of new terms rather than having a new 
-            // wp_set_object_terms for each one. So, let's run through
-            // the feed terms, compare with the existing terms and create a new 
-            // array of only new terms, then run wp_set_object_terms with that.
-            //
-            // Create an index of the existing ones to 
-            // match against.
-            $ckindex = [];
-            if(!empty($coursekeys)) {
-              foreach($coursekeys as $ck) {
-                array_push($ckindex,trim($ck->name));
-              }
-            }
-            // echo '<pre>'; print_r($ctindex); exit;
-            // Store any new cats in here
-            $newkeys = [];
-            // Run through each cat in the feed and check it
-            foreach($feedkeys as $fk) {
-              // Does this term NOT exist in the existing cats?
-              if(!in_array($fk,$ckindex)) {
-                // Add it to the array
-                array_push($newkeys,$fk);
-              }
-            }
-            
-            // If the newcats array isn't empty, run wp_set_object_terms against
-            // the new terms all in one go
-            if(!empty($newkeys)) {
-              wp_set_object_terms( $course->ID, $feedkeys, 'keywords', false);
-            }
-
-            // But now we also need to account for keywords that have been 
-            // removed, so we quickly create an index of the existing ones to 
-            // match against.
-            $ckindex = [];
-            foreach($coursekeys as $kc) {
-              array_push($ckindex,$kc->name);
-            }
-            // Loop through each of the existing keywords so as to remove terms 
-            // which don't exist in the terms in the feed
-            foreach($coursekeys as $ck) {
-                if(!in_array($ck->name, $feedkeys)) {
-                    // The name of this course key isn't in the feed keys
-                    // Delete the old keyword!
-                    wp_remove_object_terms( $course->ID, $ck->name, 'keywords' );
-                }
-            }
-          }
-
-          #TODO update topics and maybe keywords too?
-          $coursetop = get_the_terms($course->ID,'topics');
-          if($coursetop[0]->name != $feedcourse->topic->name) {
-            $tname = $coursetop[0]->name;
-            if($feedcourse->topic->name == 'House of Indigenous Learning') {
-              $tname = 'Indigenous Learning';
-            }
-            wp_set_object_terms( $course->ID, sanitize_text_field($tname), 'topics', false);
-          }
-
-          // Coming into the home stretch updating the partner and delivery method.
-          $coursepartner = get_the_terms($course->ID,'learning_partner');
-          // There's only ever one partner #TODO support multiple partners?
-          if($coursepartner[0]->name != 'Learning Centre') {
-              wp_set_object_terms( $course->ID, 'Learning Centre', 'learning_partner', false);
-          }
-
-
-      } else { // Does the course title match a title that's in the feed?
-
-          // This course is not in the feed anymore.
-          // Make it PRIVATE.
-          $course->post_status = 'private';
-          wp_update_post( $course );
-
-      }
-  }
-
-  // Next, let's loop through the feed again, this time looking at the newly created
-  // $courseindex array with just the published course names in it for easy lookup
-  //
-  // If the course doesn't exist within the catalog yet, then we create it!
-  //
-  foreach($feed->pathways as $feedcourse) {
-
-      if(!in_array($feedcourse->id, $courseindex) && !empty($feedcourse->id)) {
-
-          // This course isn't in the list of published courses
-          // so it is new, so we need to create this course from scratch.
-          // Set up the new course with basic settings in place
-          $fcurl = 'https://learningcurator.gww.gov.bc.ca/p/' . $feedcourse->slug;
-          $new_course = array(
-              'post_title' => trim($feedcourse->name),
-              'post_type' => 'course',
-              'post_status' => 'publish', 
-              'post_content' => sanitize_text_field($feedcourse->objective),
-              'post_excerpt' => substr(sanitize_text_field($feedcourse->objective), 0, 100),
-              'meta_input'   => array(
-                  'course_link' => esc_url_raw($fcurl),
-                  'pathway_id' => $feedcourse->id
-              )
-          );
-          // Actually create the new post so that we can move on 
-          // to updating it with taxonomy etc
-          $post_id = wp_insert_post( $new_course );
-
-          wp_set_object_terms( $post_id, 'Curated Pathway', 'delivery_method', false);
-          // wp_set_object_terms( $post_id, sanitize_text_field($feedcourse->_learning_partner), 'learning_partner', false);
-          wp_set_object_terms( $post_id, sanitize_text_field($feedcourse->topic->name), 'topics', false);
-          wp_set_object_terms( $post_id, 'All Employees', 'audience', false);
-          wp_set_object_terms( $post_id, 'Learning Centre', 'learning_partner', false);
-          wp_set_object_terms( $post_id, 'PSA Learning Curator', 'external_system', false);
-          if(!empty($feedcourse->keywords)) {
-            $keywords = explode(',', $feedcourse->keywords);
-            wp_set_object_terms( $post_id, $keywords, 'keywords', true);
-          }
-
-
-      } 
-      // otherwise, we've already dealt with things in the previous loop 
-      // so do nothing else
-  }
-  
-  header('Location: edit.php?noheader=true&post_type=course&page=expired_courses');
-}
-
 
 /**
  * Look through published courses not in the PSALS and check the expiry date
@@ -1028,7 +759,7 @@ function course_expire_meta_box( $post ) { ?>
     <div>
         <label for="course-expire">
         <?php _e( "The date after which this course should be removed from public view. ") ?>
-        <?php _e("Only courses not being sync'ed pay attention to this. <br>(e.g., Curator and PSALS)", 'course-expire' ); ?>
+        <?php _e("Only courses not being sync'ed pay attention to this. <br>(e.g., PSALS)", 'course-expire' ); ?>
         </label>
         <br />
         <input class="widefat" 
