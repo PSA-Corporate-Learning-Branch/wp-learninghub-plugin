@@ -4,9 +4,14 @@ Plugin Name: BC Gov Corporate Learning Hub
 Plugin URI: https://github.com/allanhaggett/wp-bcgov-learning-hub/
 Description: A gateway to everything that BC Gov has to offer for learning opportunities.
 Author: Allan Haggett <allan.haggett@gov.bc.ca>
-Version: 2.5
+Version: 3
 Author URI: https://learningcenter.gww.gov.bc.ca/learninghub/
 */
+
+// Include Parsedown library for markdown parsing
+if (file_exists(__DIR__ . '/lib/Parsedown.php')) {
+    require_once __DIR__ . '/lib/Parsedown.php';
+}
 
 
 /**
@@ -492,7 +497,7 @@ function sync_courses_with_feed($feed) {
   $feed_map = [];
   foreach ($feed->items as $feedcourse) {
       if (!empty($feedcourse->_course_id)) {
-          $feed_map[(int) $feedcourse->_course_id] = $feedcourse; // Cast to integer
+          $feed_map[$feedcourse->_course_id] = $feedcourse; // Cast to integer
       }
   }
 
@@ -507,7 +512,7 @@ function sync_courses_with_feed($feed) {
   $courseindex = [];
   foreach ($courses as $course) {
       // Retrieve elm_course_id using get_post_meta() and cast it to integer
-      $elm_course_id = (int) get_post_meta($course->ID, 'elm_course_id', true);
+      $elm_course_id = get_post_meta($course->ID, 'elm_course_id', true);
       if (!empty($elm_course_id)) {
           $courseindex[$elm_course_id] = $course->ID;
       }
@@ -515,17 +520,31 @@ function sync_courses_with_feed($feed) {
 
   // PHASE 1: Add new courses from the feed that aren't in the system
   foreach ($feed->items as $feedcourse) {
-      if (!empty($feedcourse->_course_id) && !array_key_exists((int) $feedcourse->_course_id, $courseindex)) {
+      if (!empty($feedcourse->_course_id) && !array_key_exists($feedcourse->_course_id, $courseindex)) {
           // Set external_system from the feed record
           $external_system = !empty($feedcourse->_platform) ? sanitize_text_field($feedcourse->_platform) : 'default-system';
 
           // Create the new course
+          // Convert markdown to HTML using Parsedown
+          $content_html = $feedcourse->summary;
+          if (class_exists('Parsedown')) {
+              $parsedown = new Parsedown();
+              $parsedown->setSafeMode(true); // Enable safe mode to prevent XSS
+              $content_html = $parsedown->text($content_html);
+          }
+          // Allow safe HTML tags while stripping potentially dangerous ones
+          $content_html = wp_kses_post($content_html);
+          
+          // Create excerpt from plain text version
+          $excerpt_text = wp_strip_all_tags($feedcourse->summary);
+          $excerpt = substr($excerpt_text, 0, 100);
+          
           $new_course = array(
               'post_title'   => sanitize_text_field($feedcourse->title),
               'post_type'    => 'course',
               'post_status'  => 'publish',
-              'post_content' => sanitize_text_field($feedcourse->summary),
-              'post_excerpt' => substr(sanitize_text_field($feedcourse->summary), 0, 100),
+              'post_content' => $content_html,
+              'post_excerpt' => $excerpt,
               'meta_input'   => array(
                   'course_link'        => esc_url_raw($feedcourse->url),
                   'elm_course_code'    => $feedcourse->id,
@@ -537,7 +556,7 @@ function sync_courses_with_feed($feed) {
           $post_id = wp_insert_post($new_course);
 
           // Track the new course
-          $courseindex[(int) $feedcourse->_course_id] = $post_id;
+          $courseindex[$feedcourse->_course_id] = $post_id;
 
           // Set taxonomies
           wp_set_object_terms($post_id, sanitize_text_field($feedcourse->delivery_method), 'delivery_method', false);
@@ -557,7 +576,7 @@ function sync_courses_with_feed($feed) {
 
   // PHASE 2: Update existing courses based on the feed
   foreach ($courses as $course) {
-      $elm_course_id = (int) get_post_meta($course->ID, 'elm_course_id', true);
+      $elm_course_id = get_post_meta($course->ID, 'elm_course_id', true);
 
       // Skip if elm_course_id is empty or not in the feed
       if (empty($elm_course_id) || !array_key_exists($elm_course_id, $feed_map)) {
@@ -574,9 +593,20 @@ function sync_courses_with_feed($feed) {
           $courseupdated = true;
       }
 
-      if ($feedcourse->summary != $course->post_content) {
-          $course->post_content = $feedcourse->summary;
-          $course->post_excerpt = $feedcourse->summary;
+      // Convert markdown to HTML for comparison and update
+      $content_html = $feedcourse->summary;
+      if (class_exists('Parsedown')) {
+          $parsedown = new Parsedown();
+          $parsedown->setSafeMode(true); // Enable safe mode to prevent XSS
+          $content_html = $parsedown->text($content_html);
+      }
+      $content_html = wp_kses_post($content_html);
+      
+      if ($content_html != $course->post_content) {
+          $course->post_content = $content_html;
+          // Create excerpt from plain text version
+          $excerpt_text = wp_strip_all_tags($feedcourse->summary);
+          $course->post_excerpt = substr($excerpt_text, 0, 100);
           $courseupdated = true;
       }
 
@@ -612,7 +642,7 @@ function sync_courses_with_feed($feed) {
 
   // PHASE 3: Mark any courses not found in the feed as private
   foreach ($courses as $course) {
-      $elm_course_id = (int) get_post_meta($course->ID, 'elm_course_id', true);
+      $elm_course_id = get_post_meta($course->ID, 'elm_course_id', true);
 
       if (!empty($elm_course_id) && !array_key_exists($elm_course_id, $feed_map)) {
           wp_update_post(array(
