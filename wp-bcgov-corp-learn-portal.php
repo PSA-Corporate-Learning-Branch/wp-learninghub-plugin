@@ -454,7 +454,7 @@ function course_elm_sync() {
   opcache_reset();
 
   // Single endpoint URL for fetching the course feed
-  $endpoint = 'https://learn.bcpublicservice.gov.bc.ca/learning-hub/learning-partner-courses.json';
+  $endpoint = 'https://learn.bcpublicservice.gov.bc.ca/learning-hub/bcps-corporate-learning-courses.json';
 
   // Fetch and process the course feed
   $feed = fetch_course_feed($endpoint);
