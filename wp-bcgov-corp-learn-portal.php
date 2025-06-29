@@ -553,6 +553,17 @@ function sync_courses_with_feed($feed) {
                   'elm_date_modified'  => $feedcourse->date_modified
               )
           );
+          
+          // Add persistence fields if _persistent is set to "yes"
+          if (!empty($feedcourse->_persistent) && $feedcourse->_persistent === 'yes') {
+              if (!empty($feedcourse->_persist_state)) {
+                  $new_course['meta_input']['persist_state'] = sanitize_text_field($feedcourse->_persist_state);
+              }
+              if (!empty($feedcourse->_persist_message)) {
+                  $new_course['meta_input']['persist_message'] = sanitize_text_field($feedcourse->_persist_message);
+              }
+          }
+          
           $post_id = wp_insert_post($new_course);
 
           // Track the new course
@@ -631,6 +642,20 @@ function sync_courses_with_feed($feed) {
       update_meta_if_changed($course->ID, 'elm_course_code', $feedcourse->id);
       update_meta_if_changed($course->ID, 'elm_date_published', $feedcourse->date_published);
       update_meta_if_changed($course->ID, 'elm_date_modified', $feedcourse->date_modified);
+      
+      // Update persistence fields if _persistent is set to "yes"
+      if (!empty($feedcourse->_persistent) && $feedcourse->_persistent === 'yes') {
+          if (!empty($feedcourse->_persist_state)) {
+              update_meta_if_changed($course->ID, 'persist_state', $feedcourse->_persist_state);
+          }
+          if (!empty($feedcourse->_persist_message)) {
+              update_meta_if_changed($course->ID, 'persist_message', $feedcourse->_persist_message);
+          }
+      } else {
+          // If _persistent is not "yes", remove any existing persistence metadata
+          delete_post_meta($course->ID, 'persist_state');
+          delete_post_meta($course->ID, 'persist_message');
+      }
 
       sync_taxonomy_if_changed($course->ID, 'keywords', explode(',', $feedcourse->_keywords));
       sync_taxonomy_if_changed($course->ID, 'audience', array($feedcourse->_audience));
