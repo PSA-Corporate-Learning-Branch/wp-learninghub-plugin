@@ -562,10 +562,11 @@ function sync_courses_with_feed($feed) {
               if (!empty($feedcourse->_persist_message)) {
                 if (class_exists('Parsedown')) {
                     $persistent_message = $parsedown->text(sanitize_text_field($feedcourse->_persist_message));
+                    $persistent_message = wp_kses_post($persistent_message);
                     $new_course['meta_input']['persist_message'] = $persistent_message;
                 } else {
                     error_log("Parsedown class not found, using raw text for persist_message.");
-                    $new_course['meta_input']['persist_message'] = sanitize_text_field($feedcourse->_persist_message);
+                    $new_course['meta_input']['persist_message'] = 'Something went wrong with the course persistence. Please file a CRM ticket and let us know.';
                 }
 
               }
@@ -650,13 +651,16 @@ function sync_courses_with_feed($feed) {
       update_meta_if_changed($course->ID, 'elm_date_published', $feedcourse->date_published);
       update_meta_if_changed($course->ID, 'elm_date_modified', $feedcourse->date_modified);
       
+      
       // Update persistence fields if _persistent is set to "yes"
       if (!empty($feedcourse->_persistent) && $feedcourse->_persistent === 'yes') {
           if (!empty($feedcourse->_persist_state)) {
               update_meta_if_changed($course->ID, 'persist_state', $feedcourse->_persist_state);
           }
           if (!empty($feedcourse->_persist_message)) {
-              update_meta_if_changed($course->ID, 'persist_message', $feedcourse->_persist_message);
+            $persistent_message = $parsedown->text(sanitize_text_field($feedcourse->_persist_message));
+            $persistent_message = wp_kses_post($persistent_message);
+            update_meta_if_changed($course->ID, 'persist_message', $persistent_message);
           }
       } else {
           // If _persistent is not "yes", remove any existing persistence metadata
