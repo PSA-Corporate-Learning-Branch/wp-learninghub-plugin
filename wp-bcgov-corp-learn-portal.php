@@ -526,10 +526,10 @@ function sync_courses_with_feed($feed) {
 
           // Create the new course
           // Convert markdown to HTML using Parsedown
+          $parsedown = new Parsedown();
+          $parsedown->setSafeMode(true); // Enable safe mode to prevent XSS
           $content_html = $feedcourse->summary;
           if (class_exists('Parsedown')) {
-              $parsedown = new Parsedown();
-              $parsedown->setSafeMode(true); // Enable safe mode to prevent XSS
               $content_html = $parsedown->text($content_html);
           }
           // Allow safe HTML tags while stripping potentially dangerous ones
@@ -560,7 +560,14 @@ function sync_courses_with_feed($feed) {
                   $new_course['meta_input']['persist_state'] = sanitize_text_field($feedcourse->_persist_state);
               }
               if (!empty($feedcourse->_persist_message)) {
-                  $new_course['meta_input']['persist_message'] = sanitize_text_field($feedcourse->_persist_message);
+                if (class_exists('Parsedown')) {
+                    $persistent_message = $parsedown->text(sanitize_text_field($feedcourse->_persist_message));
+                    $new_course['meta_input']['persist_message'] = $persistent_message;
+                } else {
+                    error_log("Parsedown class not found, using raw text for persist_message.");
+                    $new_course['meta_input']['persist_message'] = sanitize_text_field($feedcourse->_persist_message);
+                }
+
               }
           }
           
