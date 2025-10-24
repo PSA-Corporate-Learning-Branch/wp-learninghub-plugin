@@ -611,6 +611,11 @@ function sync_courses_with_feed($feed) {
           $course->post_title = $feedcourse->title;
           $courseupdated = true;
       }
+      // Compare and update post details
+      if ($feedcourse->_slug != $course->post_name) {
+          $course->post_name = $feedcourse->_slug;
+          $courseupdated = true;
+      }
 
       // Convert markdown to HTML for comparison and update
       $content_html = $feedcourse->summary;
