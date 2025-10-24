@@ -541,6 +541,7 @@ function sync_courses_with_feed($feed) {
           
           $new_course = array(
               'post_title'   => sanitize_text_field($feedcourse->title),
+			  'post_name'   => sanitize_text_field($feedcourse->_slug),
               'post_type'    => 'course',
               'post_status'  => 'publish',
               'post_content' => $content_html,
@@ -595,6 +596,7 @@ function sync_courses_with_feed($feed) {
 
   // PHASE 2: Update existing courses based on the feed
   foreach ($courses as $course) {
+	  
       $elm_course_id = get_post_meta($course->ID, 'elm_course_id', true);
 
       // Skip if elm_course_id is empty or not in the feed
@@ -611,7 +613,6 @@ function sync_courses_with_feed($feed) {
           $course->post_title = $feedcourse->title;
           $courseupdated = true;
       }
-      // Compare and update post details
       if ($feedcourse->_slug != $course->post_name) {
           $course->post_name = $feedcourse->_slug;
           $courseupdated = true;
@@ -643,6 +644,7 @@ function sync_courses_with_feed($feed) {
           wp_update_post(array(
               'ID'          => $course->ID,
               'post_title'  => $course->post_title,
+			  'post_name'   => $course->post_name,
               'post_content'=> $course->post_content,
               'post_excerpt'=> $course->post_excerpt,
               'post_status' => $course->post_status,
