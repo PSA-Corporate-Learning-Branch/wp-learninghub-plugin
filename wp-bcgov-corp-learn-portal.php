@@ -137,6 +137,36 @@ function my_taxonomies_learning_partner() {
 }
 
 /**
+ * Development Partners
+ */
+function my_taxonomies_development_partner() {
+    $labels = array(
+        'name'              => _x( 'Development Partners', 'taxonomy general name' ),
+        'singular_name'     => _x( 'Development Partner', 'taxonomy singular name' ),
+        'search_items'      => __( 'Search Development Partners' ),
+        'all_items'         => __( 'All Development Partners' ),
+        'edit_item'         => __( 'Edit Development Partner' ),
+        'update_item'       => __( 'Update Development Partner' ),
+        'add_new_item'      => __( 'Add New Development Partner' ),
+        'new_item_name'     => __( 'New Development Partner' ),
+        'menu_name'         => __( 'Development Partners' ),
+    );
+    $args = array(
+        'labels'            => $labels,
+        'hierarchical'      => false,
+        'show_admin_column' => true,
+        'show_in_rest'      => true,
+        'capabilities'      => array(
+            'manage_terms' => 'edit_posts',
+            'edit_terms'   => 'manage_options',
+            'delete_terms' => 'manage_options',
+            'assign_terms' => 'edit_posts',
+        ),
+    );
+    register_taxonomy( 'development_partner', 'course', $args );
+}
+
+/**
  * Course Categories
  */
 // function my_taxonomies_course_category() {
@@ -323,6 +353,7 @@ add_action( 'init', 'my_taxonomies_course_topics', 0 );
 add_action( 'init', 'my_taxonomies_course_delivery_method', 0 );
 add_action( 'init', 'my_taxonomies_course_keywords', 0 );
 add_action( 'init', 'my_taxonomies_learning_partner', 0 );
+add_action( 'init', 'my_taxonomies_development_partner', 0 );
 add_action( 'init', 'my_taxonomies_system', 0 );
 
 
@@ -378,6 +409,9 @@ function course_tax_template( $tax_template ) {
     $tax_template = get_stylesheet_directory() . '/taxonomy.php';
   }
   if ( is_tax ( 'delivery_method' ) ) {
+    $tax_template = get_stylesheet_directory() . '/taxonomy.php';
+  }
+  if ( is_tax ( 'development_partner' ) ) {
     $tax_template = get_stylesheet_directory() . '/taxonomy.php';
   }
   return $tax_template;
@@ -470,6 +504,14 @@ function course_elm_sync() {
       error_log("Failed to fetch course feed from $endpoint");
   }
 
+  $development_partners_endpoint = 'https://learn.bcpublicservice.gov.bc.ca/learning-hub/bcps-development-partners.json';
+  $partner_feed = fetch_development_partners_feed($development_partners_endpoint);
+  if ($partner_feed !== false) {
+      sync_development_partners_with_feed($partner_feed);
+  } else {
+      error_log("Failed to fetch development partner feed from $development_partners_endpoint");
+  }
+
   header('Location: edit.php?noheader=true&post_type=course&page=expired_courses');
   // echo 'Done.';
 }
@@ -487,6 +529,111 @@ function fetch_course_feed($endpoint) {
       return false; // Handle JSON parse error
   }
   return $feed;
+}
+
+/**
+ * Fetch the development partners feed as an associative array.
+ */
+function fetch_development_partners_feed($endpoint) {
+    $response = file_get_contents($endpoint);
+    if ($response === false) {
+        return false;
+    }
+
+    $partners = json_decode($response, true);
+    if (json_last_error() !== JSON_ERROR_NONE) {
+        return false;
+    }
+
+    return $partners;
+}
+
+/**
+ * Sync the Development Partners taxonomy with the feed data.
+ */
+function sync_development_partners_with_feed($partners) {
+    if ($partners === false || !is_array($partners)) {
+        return;
+    }
+
+    $existing_terms = get_terms(array(
+        'taxonomy'   => 'development_partner',
+        'hide_empty' => false,
+    ));
+
+    $existing_map = array();
+    if (!is_wp_error($existing_terms)) {
+        foreach ($existing_terms as $term) {
+            $source_id = get_term_meta($term->term_id, 'development_partner_source_id', true);
+            if ($source_id) {
+                $existing_map[(int) $source_id] = $term;
+            }
+        }
+    }
+
+    $synced_ids = array();
+
+    foreach ($partners as $partner) {
+        $partner_id = isset($partner['id']) ? absint($partner['id']) : 0;
+        $partner_name = isset($partner['name']) ? sanitize_text_field($partner['name']) : '';
+
+        if (!$partner_id || empty($partner_name)) {
+            continue;
+        }
+
+        if (!empty($partner['status']) && strtolower($partner['status']) !== 'active') {
+            continue;
+        }
+
+        $synced_ids[] = $partner_id;
+        $description = !empty($partner['description']) ? wp_kses_post($partner['description']) : '';
+        $slug = sanitize_title($partner_name);
+
+        if (isset($existing_map[$partner_id])) {
+            $term_id = $existing_map[$partner_id]->term_id;
+            $update_result = wp_update_term($term_id, 'development_partner', array(
+                'name'        => $partner_name,
+                'slug'        => $slug,
+                'description' => $description,
+            ));
+
+            if (is_wp_error($update_result)) {
+                error_log('Failed to update Development Partner term: ' . $update_result->get_error_message());
+                continue;
+            }
+        } else {
+            $insert_result = wp_insert_term($partner_name, 'development_partner', array(
+                'slug'        => $slug,
+                'description' => $description,
+            ));
+
+            if (is_wp_error($insert_result)) {
+                error_log('Failed to insert Development Partner term: ' . $insert_result->get_error_message());
+                continue;
+            }
+
+            $term_id = $insert_result['term_id'];
+            $term_obj = get_term($term_id, 'development_partner');
+            if ($term_obj && !is_wp_error($term_obj)) {
+                $existing_map[$partner_id] = $term_obj;
+            }
+        }
+
+        update_term_meta($term_id, 'development_partner_source_id', $partner_id);
+        update_term_meta($term_id, 'development_partner_status', sanitize_text_field($partner['status']));
+        update_term_meta($term_id, 'development_partner_type', sanitize_text_field($partner['type']));
+        update_term_meta($term_id, 'development_partner_url', !empty($partner['url']) ? esc_url_raw($partner['url']) : '');
+        update_term_meta($term_id, 'development_partner_contact_name', isset($partner['contact_name']) ? sanitize_text_field($partner['contact_name']) : '' );
+        update_term_meta($term_id, 'development_partner_contact_email', isset($partner['contact_email']) ? sanitize_email($partner['contact_email']) : '' );
+    }
+
+    if (!empty($existing_map)) {
+        foreach ($existing_map as $source_id => $term_obj) {
+            if (!in_array($source_id, $synced_ids, true)) {
+                wp_delete_term($term_obj->term_id, 'development_partner');
+            }
+        }
+    }
 }
 
 /**
