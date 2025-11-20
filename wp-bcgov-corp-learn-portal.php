@@ -512,6 +512,14 @@ function course_elm_sync() {
       error_log("Failed to fetch development partner feed from $development_partners_endpoint");
   }
 
+  $learning_partners_endpoint = 'https://learn.bcpublicservice.gov.bc.ca/learning-hub/bcps-corporate-learning-partners.json';
+  $learning_partner_feed = fetch_learning_partners_feed($learning_partners_endpoint);
+  if ($learning_partner_feed !== false) {
+      sync_learning_partners_with_feed($learning_partner_feed);
+  } else {
+      error_log("Failed to fetch learning partner feed from $learning_partners_endpoint");
+  }
+
   header('Location: edit.php?noheader=true&post_type=course&page=expired_courses');
   // echo 'Done.';
 }
@@ -631,6 +639,109 @@ function sync_development_partners_with_feed($partners) {
         foreach ($existing_map as $source_id => $term_obj) {
             if (!in_array($source_id, $synced_ids, true)) {
                 wp_delete_term($term_obj->term_id, 'development_partner');
+            }
+        }
+    }
+}
+
+/**
+ * Fetch the learning partners feed as an associative array.
+ */
+function fetch_learning_partners_feed($endpoint) {
+    $response = file_get_contents($endpoint);
+    if ($response === false) {
+        return false;
+    }
+
+    $partners = json_decode($response, true);
+    if (json_last_error() !== JSON_ERROR_NONE) {
+        return false;
+    }
+
+    return $partners;
+}
+
+/**
+ * Sync the Learning Partners taxonomy with the feed data.
+ */
+function sync_learning_partners_with_feed($partners) {
+    if ($partners === false || !is_array($partners)) {
+        return;
+    }
+
+    $existing_terms = get_terms(array(
+        'taxonomy'   => 'learning_partner',
+        'hide_empty' => false,
+    ));
+
+    $existing_map = array();
+    if (!is_wp_error($existing_terms)) {
+        foreach ($existing_terms as $term) {
+            $source_id = get_term_meta($term->term_id, 'learning_partner_source_id', true);
+            if ($source_id) {
+                $existing_map[(int) $source_id] = $term;
+            }
+        }
+    }
+
+    $synced_ids = array();
+
+    foreach ($partners as $partner) {
+        $partner_id = isset($partner['id']) ? absint($partner['id']) : 0;
+        $partner_name = isset($partner['name']) ? sanitize_text_field($partner['name']) : '';
+
+        if (!$partner_id || empty($partner_name)) {
+            continue;
+        }
+
+        if (!empty($partner['status']) && strtolower($partner['status']) !== 'active') {
+            continue;
+        }
+
+        $synced_ids[] = $partner_id;
+        $description = !empty($partner['description']) ? wp_kses_post($partner['description']) : '';
+        $slug = !empty($partner['slug']) ? sanitize_title($partner['slug']) : sanitize_title($partner_name);
+
+        if (isset($existing_map[$partner_id])) {
+            $term_id = $existing_map[$partner_id]->term_id;
+            $update_result = wp_update_term($term_id, 'learning_partner', array(
+                'name'        => $partner_name,
+                'slug'        => $slug,
+                'description' => $description,
+            ));
+
+            if (is_wp_error($update_result)) {
+                error_log('Failed to update Learning Partner term: ' . $update_result->get_error_message());
+                continue;
+            }
+        } else {
+            $insert_result = wp_insert_term($partner_name, 'learning_partner', array(
+                'slug'        => $slug,
+                'description' => $description,
+            ));
+
+            if (is_wp_error($insert_result)) {
+                error_log('Failed to insert Learning Partner term: ' . $insert_result->get_error_message());
+                continue;
+            }
+
+            $term_id = $insert_result['term_id'];
+            $term_obj = get_term($term_id, 'learning_partner');
+            if ($term_obj && !is_wp_error($term_obj)) {
+                $existing_map[$partner_id] = $term_obj;
+            }
+        }
+
+        update_term_meta($term_id, 'learning_partner_source_id', $partner_id);
+        update_term_meta($term_id, 'learning_partner_status', sanitize_text_field($partner['status']));
+        update_term_meta($term_id, 'learning_partner_link', !empty($partner['link']) ? esc_url_raw($partner['link']) : '');
+        update_term_meta($term_id, 'learning_partner_contact', isset($partner['employee_facing_contact']) ? sanitize_text_field($partner['employee_facing_contact']) : '' );
+    }
+
+    if (!empty($existing_map)) {
+        foreach ($existing_map as $source_id => $term_obj) {
+            if (!in_array($source_id, $synced_ids, true)) {
+                wp_delete_term($term_obj->term_id, 'learning_partner');
             }
         }
     }
