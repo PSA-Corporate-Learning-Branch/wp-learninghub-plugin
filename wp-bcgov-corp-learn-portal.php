@@ -731,6 +731,10 @@ function sync_courses_with_feed($feed) {
           wp_set_object_terms($post_id, sanitize_text_field($feedcourse->_topic), 'topics', true);
           wp_set_object_terms($post_id, sanitize_text_field($feedcourse->_audience), 'audience', true);
           wp_set_object_terms($post_id, $external_system, 'external_system', false); // Set external system from the feed record
+          $development_partner_terms = get_development_partner_terms_from_feed(isset($feedcourse->_development_partners) ? $feedcourse->_development_partners : []);
+          if (!empty($development_partner_terms)) {
+              wp_set_object_terms($post_id, $development_partner_terms, 'development_partner', false);
+          }
 
           if (!empty($feedcourse->_keywords)) {
               $keywords = explode(',', $feedcourse->_keywords);
@@ -828,6 +832,8 @@ function sync_courses_with_feed($feed) {
       sync_taxonomy_if_changed($course->ID, 'learning_partner', array($feedcourse->_learning_partner));
       sync_taxonomy_if_changed($course->ID, 'delivery_method', array($feedcourse->delivery_method));
       sync_taxonomy_if_changed($course->ID, 'external_system', array($external_system)); // Update external system
+      $development_partner_terms = get_development_partner_terms_from_feed(isset($feedcourse->_development_partners) ? $feedcourse->_development_partners : []);
+      sync_taxonomy_if_changed($course->ID, 'development_partner', $development_partner_terms);
   }
 
   // PHASE 3: Mark any courses not found in the feed as private
@@ -861,17 +867,59 @@ function sync_taxonomy_if_changed($post_id, $taxonomy, $new_terms) {
     $current_terms = get_the_terms($post_id, $taxonomy);
     $current_term_names = (!empty($current_terms)) ? wp_list_pluck($current_terms, 'name') : [];
 
-    // Add new terms
-    if (array_diff($new_terms, $current_term_names)) {
+    $new_terms = array_filter(array_map('sanitize_text_field', (array) $new_terms));
+
+    $sorted_current = $current_term_names;
+    $sorted_new = $new_terms;
+    sort($sorted_current);
+    sort($sorted_new);
+
+    if ($sorted_current !== $sorted_new) {
         wp_set_object_terms($post_id, $new_terms, $taxonomy, false);
     }
+}
 
-    // Remove terms that no longer exist
-    foreach ($current_term_names as $term_name) {
-        if (!in_array($term_name, $new_terms)) {
-            wp_remove_object_terms($post_id, $term_name, $taxonomy);
+/**
+ * Map feed-provided development partners to WordPress term names.
+ */
+function get_development_partner_terms_from_feed($feed_partners) {
+    if (empty($feed_partners) || !is_array($feed_partners)) {
+        return [];
+    }
+
+    $term_names = [];
+
+    foreach ($feed_partners as $partner) {
+        if (is_array($partner)) {
+            $partner = (object) $partner;
+        }
+
+        if (!is_object($partner)) {
+            continue;
+        }
+
+        $slug = !empty($partner->slug) ? sanitize_title($partner->slug) : '';
+        $name = !empty($partner->name) ? sanitize_text_field($partner->name) : '';
+
+        if (!$slug && !$name) {
+            continue;
+        }
+
+        $term = null;
+        if ($slug) {
+            $term = get_term_by('slug', $slug, 'development_partner');
+        }
+
+        if (!$term && $name) {
+            $term = get_term_by('name', $name, 'development_partner');
+        }
+
+        if ($term && !is_wp_error($term)) {
+            $term_names[] = $term->name;
         }
     }
+
+    return array_values(array_unique($term_names));
 }
 
 
