@@ -412,7 +412,7 @@ function course_tax_template( $tax_template ) {
     $tax_template = get_stylesheet_directory() . '/taxonomy.php';
   }
   if ( is_tax ( 'development_partner' ) ) {
-    $tax_template = get_stylesheet_directory() . '/taxonomy.php';
+    $tax_template = get_stylesheet_directory() . '/taxonomy-development_partner.php';
   }
   return $tax_template;
 }
