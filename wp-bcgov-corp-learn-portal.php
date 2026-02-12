@@ -490,7 +490,10 @@ function course_elm_sync() {
       wp_die(__('You do not have sufficient permissions to access this page.'));
   }
 
-  opcache_reset();
+  // Reset OPcache only if it's available
+  if (function_exists('opcache_reset')) {
+      opcache_reset();
+  }
 
   // Single endpoint URL for fetching the course feed
   $endpoint = 'https://learn.bcpublicservice.gov.bc.ca/learning-hub/bcps-corporate-learning-courses.json';
@@ -764,6 +767,8 @@ function sync_courses_with_feed($feed) {
       'post_type' => 'course',
       'numberposts' => -1,
       'post_status' => 'any',
+      'update_post_meta_cache' => false,
+      'update_post_term_cache' => false,
   ));
 
   // Build an index of existing course IDs in the system
@@ -1051,6 +1056,8 @@ function expired_courses () {
       'post_type' => 'course',
       'numberposts' => -1,
       'post_status'    => 'published',
+      'update_post_meta_cache' => false,
+      'update_post_term_cache' => false,
       'tax_query' => array(
           array(
           'taxonomy' => 'external_system',
