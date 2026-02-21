@@ -384,6 +384,29 @@ function lzone_custom_search( $search, $query ) {
 }
 add_filter( 'posts_search', 'lzone_custom_search', 10, 2 );
 
+// Order search results by relevance: title matches first, then content, then taxonomy-only
+function lzone_custom_search_orderby( $orderby, $query ) {
+    global $wpdb;
+
+    if ( ( $query->is_search() || $query->get('custom_search') ) && ! empty( $query->get('s') ) ) {
+        $search_term = esc_sql( $query->get('s') );
+
+        $orderby = "
+            CASE
+                WHEN {$wpdb->posts}.post_title LIKE '{$search_term}' THEN 0
+                WHEN {$wpdb->posts}.post_title LIKE '{$search_term}%' THEN 1
+                WHEN {$wpdb->posts}.post_title LIKE '%{$search_term}%' THEN 2
+                WHEN {$wpdb->posts}.post_content LIKE '%{$search_term}%' THEN 3
+                ELSE 4
+            END ASC,
+            {$wpdb->posts}.post_title ASC
+        ";
+    }
+
+    return $orderby;
+}
+add_filter( 'posts_orderby', 'lzone_custom_search_orderby', 10, 2 );
+
 // Add the custom query variable
 function add_custom_query_vars($vars) {
     $vars[] = 'custom_search';
