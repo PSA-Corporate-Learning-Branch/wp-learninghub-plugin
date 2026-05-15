@@ -358,54 +358,183 @@ add_action( 'init', 'my_taxonomies_system', 0 );
 
 
 
-// search all taxonomies, based on: http://projects.jesseheap.com/all-projects/wordpress-plugin-tag-search-in-wordpress-23
+/**
+ * Replace WP's default search WHERE clause so the keyword also matches against
+ * taxonomy term names + slugs (Topics, Audience, Delivery Method, Keywords, etc.)
+ * in addition to title / excerpt / content.
+ *
+ * A keyword like "ethics" returns ~3 courses with the word in the title or
+ * description, but ~5 more that are tagged with an "Ethics" topic. Without
+ * this, the only way to get the taxonomy-tagged results is the legacy
+ * client-side list.js filter on /learninghub/filter/.
+ *
+ * Multi-word queries are split on whitespace and each term must match
+ * somewhere (matches WP core's default AND-of-terms behaviour). LIKE
+ * wildcards in user input are escaped via $wpdb->esc_like().
+ */
 function lzone_custom_search( $search, $query ) {
-  global $wpdb;
+    global $wpdb;
 
-  if ( ( $query->is_search() || $query->get('custom_search') ) && ! empty( $query->get('s') ) ) {
-      // Sanitize the search term
-      $search_term = esc_sql( $query->get('s') );
+    if ( is_admin() ) {
+        return $search;
+    }
 
-      // Build the search SQL
-      $search = " AND (";
-      $search .= "{$wpdb->posts}.post_title LIKE '%{$search_term}%'";
-      $search .= " OR {$wpdb->posts}.post_content LIKE '%{$search_term}%'";
-      $search .= " OR EXISTS (
-          SELECT 1 FROM {$wpdb->term_relationships} tr
-          INNER JOIN {$wpdb->term_taxonomy} tt ON tr.term_taxonomy_id = tt.term_taxonomy_id
-          INNER JOIN {$wpdb->terms} t ON tt.term_id = t.term_id
-          WHERE tr.object_id = {$wpdb->posts}.ID
-          AND t.name LIKE '%{$search_term}%'
-      )";
-      $search .= " )";
-  }
+    // Apply on the main front-end search, OR on any secondary query that
+    // explicitly opts in via `custom_search` (search.php uses this so it can
+    // attach a tax_query to the same search results).
+    $is_main_search = $query->is_main_query() && $query->is_search();
+    $is_opt_in      = (bool) $query->get( 'custom_search' );
+    if ( ! $is_main_search && ! $is_opt_in ) {
+        return $search;
+    }
 
-  return $search;
+    $s = trim( (string) $query->get( 's' ) );
+    if ( $s === '' ) {
+        return $search;
+    }
+
+    // Split into terms the same way WP core does: respect quoted phrases,
+    // otherwise break on whitespace.
+    $terms = lzone_parse_search_terms( $s );
+    if ( empty( $terms ) ) {
+        $terms = array( $s );
+    }
+
+    $term_clauses = array();
+    foreach ( $terms as $term ) {
+        $like = '%' . $wpdb->esc_like( $term ) . '%';
+
+        $tax_exists = $wpdb->prepare(
+            "EXISTS (
+                SELECT 1 FROM {$wpdb->term_relationships} tr
+                INNER JOIN {$wpdb->term_taxonomy} tt ON tr.term_taxonomy_id = tt.term_taxonomy_id
+                INNER JOIN {$wpdb->terms} t ON tt.term_id = t.term_id
+                WHERE tr.object_id = {$wpdb->posts}.ID
+                  AND ( t.name LIKE %s OR t.slug LIKE %s )
+            )",
+            $like,
+            $like
+        );
+
+        $term_clauses[] = $wpdb->prepare(
+            "( {$wpdb->posts}.post_title LIKE %s"
+            . " OR {$wpdb->posts}.post_excerpt LIKE %s"
+            . " OR {$wpdb->posts}.post_content LIKE %s"
+            . " OR $tax_exists )",
+            $like,
+            $like,
+            $like
+        );
+    }
+
+    return ' AND (' . implode( ' AND ', $term_clauses ) . ') ';
 }
 add_filter( 'posts_search', 'lzone_custom_search', 10, 2 );
 
-// Order search results by relevance: title matches first, then content, then taxonomy-only
+/**
+ * Split a search string into terms, honouring "double quoted phrases" the
+ * same way WP core's get_search_query() splitter does.
+ */
+function lzone_parse_search_terms( $s ) {
+    $terms = array();
+    if ( preg_match_all( '/".*?("|$)|((?<=[\t ",+])|^)[^\t ",+]+/', $s, $matches ) ) {
+        foreach ( $matches[0] as $t ) {
+            $t = trim( $t, "\"'\n\r\t " );
+            if ( $t !== '' ) {
+                $terms[] = $t;
+            }
+        }
+    }
+    return $terms;
+}
+
+/**
+ * Rank search results: exact title > title-prefix > title-contains > content
+ * > taxonomy-only. Uses the full original search string (incl. quoted phrases)
+ * for the title/content ranking so that "leadership development" outranks a
+ * page that only happens to mention "leadership" somewhere.
+ */
 function lzone_custom_search_orderby( $orderby, $query ) {
     global $wpdb;
 
-    if ( ( $query->is_search() || $query->get('custom_search') ) && ! empty( $query->get('s') ) ) {
-        $search_term = esc_sql( $query->get('s') );
-
-        $orderby = "
-            CASE
-                WHEN {$wpdb->posts}.post_title LIKE '{$search_term}' THEN 0
-                WHEN {$wpdb->posts}.post_title LIKE '{$search_term}%' THEN 1
-                WHEN {$wpdb->posts}.post_title LIKE '%{$search_term}%' THEN 2
-                WHEN {$wpdb->posts}.post_content LIKE '%{$search_term}%' THEN 3
-                ELSE 4
-            END ASC,
-            {$wpdb->posts}.post_title ASC
-        ";
+    if ( is_admin() ) {
+        return $orderby;
     }
 
-    return $orderby;
+    $is_main_search = $query->is_main_query() && $query->is_search();
+    $is_opt_in      = (bool) $query->get( 'custom_search' );
+    if ( ! $is_main_search && ! $is_opt_in ) {
+        return $orderby;
+    }
+
+    $s = trim( (string) $query->get( 's' ) );
+    if ( $s === '' ) {
+        return $orderby;
+    }
+
+    // Respect an explicit orderby chosen by the caller (e.g. the Catalog page
+    // passing 'date' or 'title' for the sort dropdown). Only apply the custom
+    // relevance ranking when the caller asked for it via 'relevance', which
+    // is also our default when ?s is set with no explicit sort.
+    $requested = $query->get( 'orderby' );
+    if ( $requested !== 'relevance' && $requested !== '' ) {
+        return $orderby;
+    }
+
+    $exact    = $wpdb->esc_like( $s );
+    $prefix   = $exact . '%';
+    $contains = '%' . $exact . '%';
+
+    return $wpdb->prepare(
+        "CASE
+            WHEN {$wpdb->posts}.post_title LIKE %s THEN 0
+            WHEN {$wpdb->posts}.post_title LIKE %s THEN 1
+            WHEN {$wpdb->posts}.post_title LIKE %s THEN 2
+            WHEN {$wpdb->posts}.post_content LIKE %s THEN 3
+            ELSE 4
+        END ASC, {$wpdb->posts}.post_title ASC",
+        $exact,
+        $prefix,
+        $contains,
+        $contains
+    );
 }
 add_filter( 'posts_orderby', 'lzone_custom_search_orderby', 10, 2 );
+
+/**
+ * Restrict the main front-end search to the "course" post type. Without this,
+ * /?s=foo would also pull in matching Pages (About, Categories, etc.) which
+ * we don't want surfaced in the catalogue search results.
+ *
+ * Special case: when the URL targets a specific Page (e.g. /catalog/?s=foo),
+ * we *unsearch* the main query entirely. The page template reads $_GET['s']
+ * itself and runs its own WP_Query with tax_query + s, so the main query just
+ * needs to resolve the Page. Without this, WP would try to find a Page named
+ * "catalog" that also matches the keyword (post_title/content LIKE), find
+ * nothing, and 404. The template hierarchy would also short-circuit to
+ * search.php (which redirects to /catalog/?s=...) and infinite-loop.
+ */
+function lzone_restrict_search_to_courses( $query ) {
+    if ( is_admin() || ! $query->is_main_query() ) {
+        return;
+    }
+
+    // Must run BEFORE the is_search() check: when both pagename and s are
+    // set, WP marks the query is_search=false but still applies `s` to the
+    // page-lookup WHERE clause, so no page matches and the request 404s.
+    if ( ( $query->get( 'pagename' ) !== '' || $query->get( 'page_id' ) ) && $query->get( 's' ) !== '' ) {
+        $query->set( 's', '' );
+        $query->is_search = false;
+        return;
+    }
+
+    if ( ! $query->is_search() ) {
+        return;
+    }
+
+    $query->set( 'post_type', 'course' );
+}
+add_action( 'pre_get_posts', 'lzone_restrict_search_to_courses' );
 
 // Add the custom query variable
 function add_custom_query_vars($vars) {
