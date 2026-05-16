@@ -889,8 +889,8 @@ function sync_learning_partners_with_feed($partners) {
 
         update_term_meta($term_id, 'learning_partner_source_id', $partner_id);
         update_term_meta($term_id, 'learning_partner_status', sanitize_text_field($partner['status']));
-        update_term_meta($term_id, 'learning_partner_link', !empty($partner['link']) ? esc_url_raw($partner['link']) : '');
-        update_term_meta($term_id, 'learning_partner_contact', isset($partner['employee_facing_contact']) ? sanitize_text_field($partner['employee_facing_contact']) : '' );
+        update_term_meta($term_id, 'partner-url', !empty($partner['link']) ? esc_url_raw($partner['link']) : '');
+        update_term_meta($term_id, 'partner-contact', isset($partner['employee_facing_contact']) ? sanitize_text_field($partner['employee_facing_contact']) : '' );
     }
 
     if (!empty($existing_map)) {
