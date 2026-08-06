@@ -648,7 +648,7 @@ function course_elm_sync() {
   }
 
   // Single endpoint URL for fetching the course feed
-  $endpoint = 'https://learn.bcpublicservice.gov.bc.ca/learning-hub/bcps-corporate-learning-courses.json';
+  $endpoint = 'https://learn.bcpublicservice.gov.bc.ca/learning-hub/publish/bcps-corporate-learning-courses.json';
 
   // Fetch and process the course feed
   $feed = fetch_course_feed($endpoint);
@@ -659,7 +659,7 @@ function course_elm_sync() {
       error_log("Failed to fetch course feed from $endpoint");
   }
 
-  $development_partners_endpoint = 'https://learn.bcpublicservice.gov.bc.ca/learning-hub/bcps-development-partners.json';
+  $development_partners_endpoint = 'https://learn.bcpublicservice.gov.bc.ca/learning-hub/publish/bcps-development-partners.json';
   $partner_feed = fetch_development_partners_feed($development_partners_endpoint);
   if ($partner_feed !== false) {
       sync_development_partners_with_feed($partner_feed);
@@ -667,7 +667,7 @@ function course_elm_sync() {
       error_log("Failed to fetch development partner feed from $development_partners_endpoint");
   }
 
-  $learning_partners_endpoint = 'https://learn.bcpublicservice.gov.bc.ca/learning-hub/bcps-corporate-learning-partners.json';
+  $learning_partners_endpoint = 'https://learn.bcpublicservice.gov.bc.ca/learning-hub/publish/bcps-corporate-learning-partners.json';
   $learning_partner_feed = fetch_learning_partners_feed($learning_partners_endpoint);
   if ($learning_partner_feed !== false) {
       sync_learning_partners_with_feed($learning_partner_feed);
