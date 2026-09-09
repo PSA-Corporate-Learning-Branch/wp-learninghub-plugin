@@ -857,6 +857,23 @@ function sync_learning_partners_with_feed($partners) {
         $description = !empty($partner['description']) ? wp_kses_post($partner['description']) : '';
         $slug = !empty($partner['slug']) ? sanitize_title($partner['slug']) : sanitize_title($partner_name);
 
+        // Imported terms may predate source IDs. Reuse them without losing course relationships.
+        if (!isset($existing_map[$partner_id])) {
+            $existing_term = get_term_by('slug', $slug, 'learning_partner');
+            if (!$existing_term) {
+                $existing_term = get_term_by('name', $partner_name, 'learning_partner');
+            }
+
+            if ($existing_term) {
+                $source_id = get_term_meta($existing_term->term_id, 'learning_partner_source_id', true);
+                if ($source_id && (int) $source_id !== $partner_id) {
+                    error_log('Learning Partner term already belongs to another source ID: ' . $existing_term->term_id);
+                    continue;
+                }
+                $existing_map[$partner_id] = $existing_term;
+            }
+        }
+
         if (isset($existing_map[$partner_id])) {
             $term_id = $existing_map[$partner_id]->term_id;
             $update_result = wp_update_term($term_id, 'learning_partner', array(
@@ -1510,22 +1527,23 @@ if ( ! class_exists( 'CT_TAX_META' ) ) {
      * @since 1.0.0
      */
      public function updated_category_image ( $term_id, $tt_id ) {
+       // Sync also fires this hook; only change fields submitted by the term editor.
        if( isset( $_POST['category-image-id'] ) && '' !== $_POST['category-image-id'] ){
          $image = $_POST['category-image-id'];
          update_term_meta ( $term_id, 'category-image-id', $image );
-       } else {
+       } elseif ( isset( $_POST['category-image-id'] ) ) {
          update_term_meta ( $term_id, 'category-image-id', '' );
        }
        if( isset( $_POST['partner-url'] ) && '' !== $_POST['partner-url'] ){
         $url = $_POST['partner-url'];
         update_term_meta ( $term_id, 'partner-url', $url );
-      } else {
+      } elseif ( isset( $_POST['partner-url'] ) ) {
         update_term_meta ( $term_id, 'partner-url', '' );
       }
        if( isset( $_POST['partner-contact'] ) && '' !== $_POST['partner-contact'] ){
         $pcinfo = $_POST['partner-contact'];
         update_term_meta ( $term_id, 'partner-contact', $pcinfo );
-      } else {
+      } elseif ( isset( $_POST['partner-contact'] ) ) {
         update_term_meta ( $term_id, 'partner-contact', '' );
       }
      }

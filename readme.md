@@ -31,6 +31,24 @@ organizational logo.
 There are also system-specific synchronization methods, including the 
 PSA Learning System (ELM) and the Learning Curator.
 
+### Learning partner sync
+
+Sync matches partners by `learning_partner_source_id`. Existing imported terms without
+that metadata are matched by feed slug, then name, and receive the source ID on their
+next sync. Their term IDs, course relationships, and logos are preserved. Feed links
+and contacts populate `partner-url` and `partner-contact`, as used by the editor and theme.
+After deploying this fix, run **Courses > Systems Sync** to refresh existing partners;
+no separate migration is required.
+
+Run the regression check on a disposable WordPress installation with this plugin active:
+
+```sh
+wp eval-file wp-content/plugins/wp-learninghub-plugin/tests/learning-partner-sync.php
+```
+
+The check requires InnoDB tables and rolls back its database changes. It exercises
+imported and new partners, repeat syncs, field clearing, and logo/course preservation.
+
 ### Version 2 Release Notes:
 
 - sync completely re-written to only touch database when it needs to.
