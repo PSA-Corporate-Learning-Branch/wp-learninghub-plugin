@@ -4,9 +4,11 @@ Plugin Name: BC Gov Corporate Learning Hub
 Plugin URI: https://github.com/allanhaggett/wp-bcgov-learning-hub/
 Description: A gateway to everything that BC Gov has to offer for learning opportunities.
 Author: Allan Haggett <allan.haggett@gov.bc.ca>
-Version: 3.1
+Version: 3.2.1
 Author URI: https://learningcenter.gww.gov.bc.ca/learninghub/
 */
+
+require_once __DIR__ . '/lib/systems-sync.php';
 
 // Include Parsedown library for markdown parsing
 if (file_exists(__DIR__ . '/lib/Parsedown.php')) {
@@ -616,67 +618,16 @@ add_action( 'admin_menu', 'course_menu' );
  * supported.
  */
 function systems_sync() {
-
-	if ( !current_user_can( 'edit_posts' ) )  {
-		wp_die( __( 'You do not have sufficient permissions to access this page.' ) );
-	}
-    echo '<h1>External Systems Synchronization</h1>';
-    echo '<p>The LearningHUB synchronizes with other systems, currently including the ';
-    echo '<a href="https://learning.gov.bc.ca/CHIPSPLM/signon.html" target="_blank">PSA Learning System</a>';
-    echo '<p>Additionally, running this sync process will examine courses that aren\'t in a sync system which have an ';
-    echo 'expiration date set. If the date is older than today, the course is marked private.</p>';
-    $psalslink = admin_url('edit.php?noheader=true&post_type=course&page=course_elm_sync');
-    echo '<div style="margin-bottom: 1em;">';
-    echo '<a href="'.$psalslink.'" ';
-    echo 'style="background-color: #222; border-radius: 5px; color: #FFF; display: inline-block; padding: .75em 2em; text-decoration: none;">';
-    echo 'Start Systems Sync';
-    echo '</a>';
-    echo '</div>';
-
-
+    learninghub_render_sync_page();
 }
 
 function course_elm_sync() {
-
-  if (!current_user_can('edit_posts')) {
-      wp_die(__('You do not have sufficient permissions to access this page.'));
-  }
-
-  // Reset OPcache only if it's available
-  if (function_exists('opcache_reset')) {
-      opcache_reset();
-  }
-
-  // Single endpoint URL for fetching the course feed
-  $endpoint = 'https://learn.bcpublicservice.gov.bc.ca/learning-hub/publish/bcps-corporate-learning-courses.json';
-
-  // Fetch and process the course feed
-  $feed = fetch_course_feed($endpoint);
-  if ($feed) {
-      sync_courses_with_feed($feed);
-  } else {
-      // Log or handle error: feed could not be retrieved from the endpoint
-      error_log("Failed to fetch course feed from $endpoint");
-  }
-
-  $development_partners_endpoint = 'https://learn.bcpublicservice.gov.bc.ca/learning-hub/publish/bcps-development-partners.json';
-  $partner_feed = fetch_development_partners_feed($development_partners_endpoint);
-  if ($partner_feed !== false) {
-      sync_development_partners_with_feed($partner_feed);
-  } else {
-      error_log("Failed to fetch development partner feed from $development_partners_endpoint");
-  }
-
-  $learning_partners_endpoint = 'https://learn.bcpublicservice.gov.bc.ca/learning-hub/publish/bcps-corporate-learning-partners.json';
-  $learning_partner_feed = fetch_learning_partners_feed($learning_partners_endpoint);
-  if ($learning_partner_feed !== false) {
-      sync_learning_partners_with_feed($learning_partner_feed);
-  } else {
-      error_log("Failed to fetch learning partner feed from $learning_partners_endpoint");
-  }
-
-  header('Location: edit.php?noheader=true&post_type=course&page=expired_courses');
-  // echo 'Done.';
+    // Old bookmarks used noheader=true, which prevents the batch UI scripts loading.
+    if (!headers_sent()) {
+        wp_safe_redirect(admin_url('edit.php?post_type=course&page=systems-sync'));
+        exit;
+    }
+    systems_sync();
 }
 
 /**
@@ -714,7 +665,7 @@ function fetch_development_partners_feed($endpoint) {
 /**
  * Sync the Development Partners taxonomy with the feed data.
  */
-function sync_development_partners_with_feed($partners) {
+function sync_development_partners_with_feed($partners, $prune = true) {
     if ($partners === false || !is_array($partners)) {
         return;
     }
@@ -752,6 +703,21 @@ function sync_development_partners_with_feed($partners) {
         $description = !empty($partner['description']) ? wp_kses_post($partner['description']) : '';
         $slug = sanitize_title($partner_name);
 
+        // Courses and imported content may already have created this term.
+        if (!isset($existing_map[$partner_id])) {
+            $existing_term = get_term_by('slug', $slug, 'development_partner');
+            if (!$existing_term) {
+                $existing_term = get_term_by('name', $partner_name, 'development_partner');
+            }
+            if ($existing_term) {
+                $source_id = get_term_meta($existing_term->term_id, 'development_partner_source_id', true);
+                if ($source_id && (int) $source_id !== $partner_id) {
+                    throw new RuntimeException('Development Partner term belongs to another source ID.');
+                }
+                $existing_map[$partner_id] = $existing_term;
+            }
+        }
+
         if (isset($existing_map[$partner_id])) {
             $term_id = $existing_map[$partner_id]->term_id;
             $update_result = wp_update_term($term_id, 'development_partner', array(
@@ -761,8 +727,7 @@ function sync_development_partners_with_feed($partners) {
             ));
 
             if (is_wp_error($update_result)) {
-                error_log('Failed to update Development Partner term: ' . $update_result->get_error_message());
-                continue;
+                throw new RuntimeException($update_result->get_error_message());
             }
         } else {
             $insert_result = wp_insert_term($partner_name, 'development_partner', array(
@@ -771,8 +736,7 @@ function sync_development_partners_with_feed($partners) {
             ));
 
             if (is_wp_error($insert_result)) {
-                error_log('Failed to insert Development Partner term: ' . $insert_result->get_error_message());
-                continue;
+                throw new RuntimeException($insert_result->get_error_message());
             }
 
             $term_id = $insert_result['term_id'];
@@ -783,14 +747,14 @@ function sync_development_partners_with_feed($partners) {
         }
 
         update_term_meta($term_id, 'development_partner_source_id', $partner_id);
-        update_term_meta($term_id, 'development_partner_status', sanitize_text_field($partner['status']));
-        update_term_meta($term_id, 'development_partner_type', sanitize_text_field($partner['type']));
+        update_term_meta($term_id, 'development_partner_status', sanitize_text_field($partner['status'] ?? 'active'));
+        update_term_meta($term_id, 'development_partner_type', sanitize_text_field($partner['type'] ?? ''));
         update_term_meta($term_id, 'development_partner_url', !empty($partner['url']) ? esc_url_raw($partner['url']) : '');
         update_term_meta($term_id, 'development_partner_contact_name', isset($partner['contact_name']) ? sanitize_text_field($partner['contact_name']) : '' );
         update_term_meta($term_id, 'development_partner_contact_email', isset($partner['contact_email']) ? sanitize_email($partner['contact_email']) : '' );
     }
 
-    if (!empty($existing_map)) {
+    if ($prune && !empty($existing_map)) {
         foreach ($existing_map as $source_id => $term_obj) {
             if (!in_array($source_id, $synced_ids, true)) {
                 wp_delete_term($term_obj->term_id, 'development_partner');
@@ -819,7 +783,7 @@ function fetch_learning_partners_feed($endpoint) {
 /**
  * Sync the Learning Partners taxonomy with the feed data.
  */
-function sync_learning_partners_with_feed($partners) {
+function sync_learning_partners_with_feed($partners, $prune = true) {
     if ($partners === false || !is_array($partners)) {
         return;
     }
@@ -867,8 +831,7 @@ function sync_learning_partners_with_feed($partners) {
             if ($existing_term) {
                 $source_id = get_term_meta($existing_term->term_id, 'learning_partner_source_id', true);
                 if ($source_id && (int) $source_id !== $partner_id) {
-                    error_log('Learning Partner term already belongs to another source ID: ' . $existing_term->term_id);
-                    continue;
+                    throw new RuntimeException('Learning Partner term already belongs to another source ID: ' . $existing_term->term_id);
                 }
                 $existing_map[$partner_id] = $existing_term;
             }
@@ -883,8 +846,7 @@ function sync_learning_partners_with_feed($partners) {
             ));
 
             if (is_wp_error($update_result)) {
-                error_log('Failed to update Learning Partner term: ' . $update_result->get_error_message());
-                continue;
+                throw new RuntimeException($update_result->get_error_message());
             }
         } else {
             $insert_result = wp_insert_term($partner_name, 'learning_partner', array(
@@ -893,8 +855,7 @@ function sync_learning_partners_with_feed($partners) {
             ));
 
             if (is_wp_error($insert_result)) {
-                error_log('Failed to insert Learning Partner term: ' . $insert_result->get_error_message());
-                continue;
+                throw new RuntimeException($insert_result->get_error_message());
             }
 
             $term_id = $insert_result['term_id'];
@@ -905,12 +866,12 @@ function sync_learning_partners_with_feed($partners) {
         }
 
         update_term_meta($term_id, 'learning_partner_source_id', $partner_id);
-        update_term_meta($term_id, 'learning_partner_status', sanitize_text_field($partner['status']));
+        update_term_meta($term_id, 'learning_partner_status', sanitize_text_field($partner['status'] ?? 'active'));
         update_term_meta($term_id, 'partner-url', !empty($partner['link']) ? esc_url_raw($partner['link']) : '');
         update_term_meta($term_id, 'partner-contact', isset($partner['employee_facing_contact']) ? sanitize_text_field($partner['employee_facing_contact']) : '' );
     }
 
-    if (!empty($existing_map)) {
+    if ($prune && !empty($existing_map)) {
         foreach ($existing_map as $source_id => $term_obj) {
             if (!in_array($source_id, $synced_ids, true)) {
                 wp_delete_term($term_obj->term_id, 'learning_partner');
@@ -922,7 +883,7 @@ function sync_learning_partners_with_feed($partners) {
 /**
  * Syncs the courses with the provided feed.
  */
-function sync_courses_with_feed($feed) {
+function sync_courses_with_feed($feed, $courses = null, $prune = true) {
   // Create an associative array for feed courses by their _course_id (cast to integer)
   $feed_map = [];
   foreach ($feed->items as $feedcourse) {
@@ -931,14 +892,16 @@ function sync_courses_with_feed($feed) {
       }
   }
 
-  // Get all existing courses in the system
-  $courses = get_posts(array(
-      'post_type' => 'course',
-      'numberposts' => -1,
-      'post_status' => 'any',
-      'update_post_meta_cache' => false,
-      'update_post_term_cache' => false,
-  ));
+  // Batch callers supply only matches for their feed record.
+  if ($courses === null) {
+      $courses = get_posts(array(
+          'post_type' => 'course',
+          'numberposts' => -1,
+          'post_status' => 'any',
+          'update_post_meta_cache' => false,
+          'update_post_term_cache' => false,
+      ));
+  }
 
   // Build an index of existing course IDs in the system
   $courseindex = [];
@@ -1005,25 +968,26 @@ function sync_courses_with_feed($feed) {
               }
           }
           
-          $post_id = wp_insert_post($new_course);
+          $post_id = wp_insert_post(wp_slash($new_course), true);
+          learninghub_sync_check_result($post_id);
 
           // Track the new course
           $courseindex[$feedcourse->_course_id] = $post_id;
 
           // Set taxonomies
-          wp_set_object_terms($post_id, sanitize_text_field($feedcourse->delivery_method), 'delivery_method', false);
-          wp_set_object_terms($post_id, sanitize_text_field($feedcourse->_learning_partner), 'learning_partner', false);
-          wp_set_object_terms($post_id, sanitize_text_field($feedcourse->_topic), 'topics', true);
-          wp_set_object_terms($post_id, sanitize_text_field($feedcourse->_audience), 'audience', true);
-          wp_set_object_terms($post_id, $external_system, 'external_system', false); // Set external system from the feed record
+          learninghub_sync_check_result(wp_set_object_terms($post_id, sanitize_text_field($feedcourse->delivery_method), 'delivery_method', false));
+          learninghub_sync_check_result(wp_set_object_terms($post_id, sanitize_text_field($feedcourse->_learning_partner), 'learning_partner', false));
+          learninghub_sync_check_result(wp_set_object_terms($post_id, sanitize_text_field($feedcourse->_topic), 'topics', true));
+          learninghub_sync_check_result(wp_set_object_terms($post_id, sanitize_text_field($feedcourse->_audience), 'audience', true));
+          learninghub_sync_check_result(wp_set_object_terms($post_id, $external_system, 'external_system', false)); // Set external system from the feed record
           $development_partner_terms = get_development_partner_terms_from_feed(isset($feedcourse->_development_partners) ? $feedcourse->_development_partners : []);
           if (!empty($development_partner_terms)) {
-              wp_set_object_terms($post_id, $development_partner_terms, 'development_partner', false);
+              learninghub_sync_check_result(wp_set_object_terms($post_id, $development_partner_terms, 'development_partner', false));
           }
 
           if (!empty($feedcourse->_keywords)) {
               $keywords = explode(',', $feedcourse->_keywords);
-              wp_set_object_terms($post_id, $keywords, 'keywords', true);
+              learninghub_sync_check_result(wp_set_object_terms($post_id, $keywords, 'keywords', true));
           }
 
           error_log("Created new course: " . $feedcourse->title . " (ID: $post_id) with external_system: $external_system");
@@ -1077,14 +1041,15 @@ function sync_courses_with_feed($feed) {
       }
 
       if ($courseupdated) {
-          wp_update_post(array(
+          $result = wp_update_post(wp_slash(array(
               'ID'          => $course->ID,
               'post_title'  => $course->post_title,
 			  'post_name'   => $course->post_name,
               'post_content'=> $course->post_content,
               'post_excerpt'=> $course->post_excerpt,
               'post_status' => $course->post_status,
-          ));
+          )), true);
+          learninghub_sync_check_result($result);
           error_log("Updated course: " . $course->post_title . " (ID: " . $course->ID . ")");
       }
 
@@ -1121,6 +1086,11 @@ function sync_courses_with_feed($feed) {
       sync_taxonomy_if_changed($course->ID, 'development_partner', $development_partner_terms);
   }
 
+  // A partial feed must never be used to decide which courses to hide.
+  if (!$prune) {
+      return;
+  }
+
   // PHASE 3: Mark any courses not found in the feed as private
   foreach ($courses as $course) {
       $elm_course_id = get_post_meta($course->ID, 'elm_course_id', true);
@@ -1141,7 +1111,9 @@ function sync_courses_with_feed($feed) {
 function update_meta_if_changed($post_id, $meta_key, $new_value) {
     $current_value = get_post_meta($post_id, $meta_key, true);
     if ($new_value != $current_value) {
-        update_post_meta($post_id, $meta_key, $new_value);
+        if (update_post_meta($post_id, $meta_key, wp_slash($new_value)) === false) {
+            throw new RuntimeException('Could not update course field: ' . $meta_key);
+        }
     }
 }
 
@@ -1150,6 +1122,7 @@ function update_meta_if_changed($post_id, $meta_key, $new_value) {
  */
 function sync_taxonomy_if_changed($post_id, $taxonomy, $new_terms) {
     $current_terms = get_the_terms($post_id, $taxonomy);
+    learninghub_sync_check_result($current_terms);
     $current_term_names = (!empty($current_terms)) ? wp_list_pluck($current_terms, 'name') : [];
 
     $new_terms = array_filter(array_map('sanitize_text_field', (array) $new_terms));
@@ -1160,7 +1133,7 @@ function sync_taxonomy_if_changed($post_id, $taxonomy, $new_terms) {
     sort($sorted_new);
 
     if ($sorted_current !== $sorted_new) {
-        wp_set_object_terms($post_id, $new_terms, $taxonomy, false);
+        learninghub_sync_check_result(wp_set_object_terms($post_id, $new_terms, $taxonomy, false));
     }
 }
 

@@ -1,0 +1,5 @@
+/* WordPress button styles override the browser's default hidden rule. */
+#learninghub-sync-pause[hidden],
+#learninghub-sync-reset[hidden] {
+    display: none;
+}
